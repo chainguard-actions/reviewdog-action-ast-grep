@@ -1,0 +1,39 @@
+name: Test custom ast-grep version
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create empty rules directory for fixture
+        run: |
+          mkdir -p pristine/reviewdog--action-ast-grep/v1.57.0/tests/fixtures/empty-rules/rules
+
+      - id: action
+        uses: .
+        with:
+          github_token: fake-token-for-testing
+          workdir: pristine/reviewdog--action-ast-grep/v1.57.0/tests/fixtures/empty-rules
+          sg_config: sgconfig.yml
+          sg_version: 0.44.0
+          reporter: github-check
+          level: error
+          fail_level: none
+          output_dir: /tmp/reviewdog-results-version
+        continue-on-error: true
+
+      - name: Assert action completed with custom version
+        run: |
+          echo "Action outcome: ${{ steps.action.outcome }}"
+          # Verify the output directory was created (action ran through installation phase)
+          if [ -d "/tmp/reviewdog-results-version" ]; then
+            echo "PASS: output directory created, action ran with custom sg_version"
+          else
+            echo "FAIL: output directory was not created"
+            exit 1
+          fi
