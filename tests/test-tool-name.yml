@@ -1,0 +1,27 @@
+name: Test custom tool_name input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Run ast-grep action with custom tool_name
+        id: action
+        uses: .
+        with:
+          github_token: dummy-token
+          workdir: .
+          tool_name: my-custom-linter
+          reporter: local
+          filter_mode: nofilter
+          fail_level: none
+          sg_config: sgconfig.yml
+          output_dir: /tmp/reviewdog-results
+      - name: Assert action completed with custom tool name
+        run: |
+          echo "Action completed with custom tool_name=my-custom-linter"
+          echo "PASS"

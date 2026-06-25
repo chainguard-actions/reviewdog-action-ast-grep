@@ -1,0 +1,7 @@
+id: no-fixme-comment
+message: Do not leave FIXME comment
+severity: warning
+language: Go
+rule:
+  kind: comment
+  regex: "//\\s*FIXME:.*"
