@@ -1,0 +1,40 @@
+name: Test basic ast-grep scan
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Run ast-grep action with local reporter
+        id: action
+        uses: .
+        with:
+          github_token: dummy-token
+          workdir: testdata
+          sg_config: ../sgconfig.yml
+          reporter: local
+          filter_mode: nofilter
+          fail_level: none
+          level: info
+          output_dir: /tmp/reviewdog-results
+      - name: Assert output directory was created
+        run: |
+          if [ ! -d "/tmp/reviewdog-results" ]; then
+            echo "FAIL: output directory was not created"
+            exit 1
+          fi
+          echo "PASS: output directory exists"
+      - name: Assert reviewdog result file was created
+        run: |
+          RESULT_FILE="/tmp/reviewdog-results/reviewdog-ast-grep"
+          if [ ! -f "$RESULT_FILE" ]; then
+            echo "FAIL: result file not found at $RESULT_FILE"
+            ls -la /tmp/reviewdog-results/ || true
+            exit 1
+          fi
+          echo "PASS: result file exists"
+          cat "$RESULT_FILE"

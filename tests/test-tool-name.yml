@@ -1,0 +1,35 @@
+name: Test ast-grep custom tool name
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Run ast-grep action with custom tool name
+        id: action
+        uses: .
+        with:
+          github_token: dummy-token
+          workdir: testdata
+          sg_config: ../sgconfig.yml
+          tool_name: my-custom-linter
+          reporter: local
+          filter_mode: nofilter
+          fail_level: none
+          level: info
+          output_dir: /tmp/reviewdog-results-toolname
+      - name: Assert output file is named after custom tool name
+        run: |
+          RESULT_FILE="/tmp/reviewdog-results-toolname/reviewdog-my-custom-linter"
+          if [ ! -f "$RESULT_FILE" ]; then
+            echo "FAIL: expected result file at $RESULT_FILE"
+            echo "Files in output dir:"
+            ls -la /tmp/reviewdog-results-toolname/ || echo "(directory not found)"
+            exit 1
+          fi
+          echo "PASS: result file named correctly for custom tool_name"
+          cat "$RESULT_FILE"

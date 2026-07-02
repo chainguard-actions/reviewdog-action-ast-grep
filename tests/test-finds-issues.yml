@@ -1,0 +1,40 @@
+name: Test ast-grep finds issues in testdata
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Run ast-grep action against testdata with known violations
+        id: action
+        uses: .
+        with:
+          github_token: dummy-token
+          workdir: testdata
+          sg_config: ../sgconfig.yml
+          reporter: local
+          filter_mode: nofilter
+          fail_level: none
+          level: info
+          output_dir: /tmp/reviewdog-results-issues
+      - name: Assert reviewdog found issues in testdata
+        run: |
+          RESULT_FILE="/tmp/reviewdog-results-issues/reviewdog-ast-grep"
+          if [ ! -f "$RESULT_FILE" ]; then
+            echo "FAIL: result file not found"
+            ls -la /tmp/reviewdog-results-issues/ || echo "(directory not found)"
+            exit 1
+          fi
+          # The testdata/main.go has FIXME comment and context.TODO() which should be flagged
+          CONTENT=$(cat "$RESULT_FILE")
+          echo "Result content:"
+          echo "$CONTENT"
+          if [ -z "$CONTENT" ]; then
+            echo "FAIL: expected reviewdog to report issues but output was empty"
+            exit 1
+          fi
+          echo "PASS: reviewdog reported issues as expected"

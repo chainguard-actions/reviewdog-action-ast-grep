@@ -1,0 +1,57 @@
+name: Test ast-grep with custom config and no issues
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create custom ast-grep config and clean source in workspace
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/sg-custom/rules"
+          # Create a simple rule that flags console.log in JS
+          cat > "$GITHUB_WORKSPACE/sg-custom/rules/no-console-log.yml" << 'EOF'
+          id: no-console-log
+          message: Do not use console.log
+          severity: warning
+          language: JavaScript
+          rule:
+            pattern: console.log($$$)
+          EOF
+          # Create the sgconfig pointing to the rules dir
+          cat > "$GITHUB_WORKSPACE/sg-custom/sgconfig.yml" << 'EOF'
+          ruleDirs:
+          - ./rules
+          EOF
+          # Create a clean JS file with no console.log
+          cat > "$GITHUB_WORKSPACE/sg-custom/clean.js" << 'EOF'
+          function greet(name) {
+            return "Hello, " + name;
+          }
+          EOF
+      - name: Run ast-grep with custom config on clean source
+        id: action
+        uses: .
+        with:
+          github_token: dummy-token
+          workdir: sg-custom
+          sg_config: sgconfig.yml
+          reporter: local
+          filter_mode: nofilter
+          fail_level: none
+          level: warning
+          output_dir: /tmp/reviewdog-results-custom
+      - name: Assert result file was created (even with no issues)
+        run: |
+          RESULT_FILE="/tmp/reviewdog-results-custom/reviewdog-ast-grep"
+          if [ ! -f "$RESULT_FILE" ]; then
+            echo "FAIL: result file not found"
+            ls -la /tmp/reviewdog-results-custom/ || echo "(directory not found)"
+            exit 1
+          fi
+          echo "PASS: result file exists"
+          echo "Content (should be empty for clean source):"
+          cat "$RESULT_FILE"
