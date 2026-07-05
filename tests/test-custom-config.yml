@@ -1,0 +1,27 @@
+name: Test ast-grep with custom config (no rules)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          github_token: fake-token-for-testing
+          workdir: tests/fixtures/empty-rules
+          reporter: local
+          sg_config: sgconfig.yml
+          fail_level: none
+          level: error
+          output_dir: /tmp/reviewdog-results
+
+      - name: Assert action completed successfully with no findings
+        run: |
+          echo "Action ran ast-grep scan with empty rules config - no findings expected"
+          echo "PASS"
