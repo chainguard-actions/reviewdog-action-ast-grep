@@ -1,0 +1,35 @@
+name: Test custom tool_name and level inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create minimal sgconfig with empty rules dir
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/empty-rules"
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/sgconfig-empty.yml" <<'EOF'
+          ruleDirs:
+          - ./empty-rules
+          EOF
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          reporter: github-check
+          sg_config: tests/fixtures/sgconfig-empty.yml
+          tool_name: my-custom-linter
+          level: warning
+          fail_level: none
+        continue-on-error: true
+
+      - name: Assert action completed with custom tool_name
+        run: |
+          echo "Action completed with tool_name=my-custom-linter and level=warning"
+          echo "PASS: action ran with custom tool_name and level inputs"

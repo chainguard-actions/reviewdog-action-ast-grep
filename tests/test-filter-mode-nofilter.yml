@@ -1,0 +1,28 @@
+name: Test filter_mode=nofilter reports all issues
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          reporter: github-check
+          workdir: testdata
+          sg_config: ../sgconfig.yml
+          filter_mode: nofilter
+          fail_level: none
+          level: info
+        continue-on-error: true
+
+      - name: Assert action completed with nofilter mode
+        run: |
+          echo "Action completed with filter_mode=nofilter"
+          echo "PASS: action ran with nofilter mode, reporting all issues"

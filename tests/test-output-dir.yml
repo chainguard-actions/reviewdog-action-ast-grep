@@ -1,0 +1,40 @@
+name: Test output_dir creates result file
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create minimal sgconfig with empty rules dir
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/empty-rules"
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/sgconfig-empty.yml" <<'EOF'
+          ruleDirs:
+          - ./empty-rules
+          EOF
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          reporter: github-check
+          sg_config: tests/fixtures/sgconfig-empty.yml
+          output_dir: /tmp/reviewdog-test-output
+          fail_level: none
+        continue-on-error: true
+
+      - name: Assert output file was created
+        run: |
+          echo "Checking for output file in /tmp/reviewdog-test-output"
+          ls -la /tmp/reviewdog-test-output/ || true
+          if [ -d "/tmp/reviewdog-test-output" ]; then
+            echo "PASS: output directory was created"
+          else
+            echo "FAIL: output directory was not created"
+            exit 1
+          fi

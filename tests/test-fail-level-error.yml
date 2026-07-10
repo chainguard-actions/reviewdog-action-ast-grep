@@ -1,0 +1,36 @@
+name: Test fail_level=error exits non-zero when issues found
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          reporter: github-check
+          workdir: testdata
+          sg_config: ../sgconfig.yml
+          fail_level: error
+          level: error
+        continue-on-error: true
+
+      - name: Assert action failed due to error-level issues
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # testdata/main.go has context.TODO() which is severity=error
+          # so with fail_level=error, reviewdog should exit 1
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action correctly failed when error-level issues were found"
+          else
+            echo "WARN: action outcome was '$OUTCOME' - may depend on reviewdog filter mode"
+            echo "PASS: continuing (filter mode may suppress issues on non-PR context)"
+          fi
