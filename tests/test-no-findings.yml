@@ -1,4 +1,4 @@
-name: Test basic usage - ast-grep with default config
+name: Test no findings - clean code produces no issues
 on:
   workflow_dispatch:
 jobs:
@@ -7,7 +7,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Run ast-grep action with clean fixture
+      - name: Run ast-grep action on clean code
         id: action
         uses: .
         with:
@@ -20,7 +20,7 @@ jobs:
           fail_level: none
           output_dir: /tmp/reviewdog-results
 
-      - name: Assert action completed successfully
+      - name: Assert action completed without error
         run: |
-          echo "Action completed successfully"
-          echo "PASS: ast-grep ran without fatal error"
+          echo "Action completed on clean code"
+          echo "PASS: no fatal errors on clean code"

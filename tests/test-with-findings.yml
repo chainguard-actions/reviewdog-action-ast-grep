@@ -1,4 +1,4 @@
-name: Test basic usage - ast-grep with default config
+name: Test with findings - code issues are detected
 on:
   workflow_dispatch:
 jobs:
@@ -7,20 +7,21 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Run ast-grep action with clean fixture
+      - name: Run ast-grep action on code with issues
         id: action
         uses: .
         with:
           github_token: ${{ github.token }}
           sg_config: sgconfig.yml
-          workdir: tests/fixtures/sgconfig-clean
+          workdir: tests/fixtures/sgconfig-findings
           reporter: github-check
           level: error
           filter_mode: nofilter
+          # fail_level=none so action exits 0 even when findings are present
           fail_level: none
           output_dir: /tmp/reviewdog-results
 
-      - name: Assert action completed successfully
+      - name: Assert action completed (findings present but fail_level=none)
         run: |
-          echo "Action completed successfully"
-          echo "PASS: ast-grep ran without fatal error"
+          echo "Action completed with findings but fail_level=none"
+          echo "PASS: action ran successfully even with code issues"

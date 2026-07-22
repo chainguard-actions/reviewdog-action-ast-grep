@@ -1,0 +1,10 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
+
+id: no-context-todo
+message: Do not use context.TODO in production code
+severity: error
+language: Go
+rule:
+  pattern: context.TODO()
+note: context.TODO() is just a temporary thing
+fix: context.Background()

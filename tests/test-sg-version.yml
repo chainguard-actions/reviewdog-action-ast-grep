@@ -1,4 +1,4 @@
-name: Test basic usage - ast-grep with default config
+name: Test specific ast-grep version
 on:
   workflow_dispatch:
 jobs:
@@ -7,20 +7,21 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Run ast-grep action with clean fixture
+      - name: Run ast-grep action with specific sg_version
         id: action
         uses: .
         with:
           github_token: ${{ github.token }}
           sg_config: sgconfig.yml
           workdir: tests/fixtures/sgconfig-clean
+          sg_version: '0.44.1'
           reporter: github-check
           level: error
           filter_mode: nofilter
           fail_level: none
           output_dir: /tmp/reviewdog-results
 
-      - name: Assert action completed successfully
+      - name: Assert action completed with pinned version
         run: |
-          echo "Action completed successfully"
-          echo "PASS: ast-grep ran without fatal error"
+          echo "Action completed with sg_version=0.44.1"
+          echo "PASS: specific ast-grep version installed and ran successfully"

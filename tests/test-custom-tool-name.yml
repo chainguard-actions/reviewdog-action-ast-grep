@@ -1,4 +1,4 @@
-name: Test basic usage - ast-grep with default config
+name: Test custom tool_name and warning level
 on:
   workflow_dispatch:
 jobs:
@@ -7,20 +7,21 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Run ast-grep action with clean fixture
+      - name: Run ast-grep action with custom tool_name and warning level
         id: action
         uses: .
         with:
           github_token: ${{ github.token }}
           sg_config: sgconfig.yml
           workdir: tests/fixtures/sgconfig-clean
+          tool_name: my-custom-linter
           reporter: github-check
-          level: error
+          level: warning
           filter_mode: nofilter
           fail_level: none
           output_dir: /tmp/reviewdog-results
 
-      - name: Assert action completed successfully
+      - name: Assert action completed with custom tool name
         run: |
-          echo "Action completed successfully"
-          echo "PASS: ast-grep ran without fatal error"
+          echo "Action completed with custom tool_name=my-custom-linter and level=warning"
+          echo "PASS: custom tool_name and level accepted"
