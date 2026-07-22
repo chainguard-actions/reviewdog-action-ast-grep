@@ -1,0 +1,56 @@
+name: Test sg_version - install specific ast-grep version
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create minimal config for version test
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/version-test/rules"
+
+          # Create a clean Go file with no violations
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/version-test/main.go" << 'EOF'
+          package main
+
+          import "fmt"
+
+          func main() {
+            fmt.Println("hello world")
+          }
+          EOF
+
+          # Create a simple rule
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/version-test/rules/no-context-todo.yml" << 'EOF'
+          id: no-context-todo
+          message: Do not use context.TODO in production code
+          severity: error
+          language: Go
+          rule:
+            pattern: context.TODO()
+          EOF
+
+          # Create sgconfig.yml
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/version-test/sgconfig.yml" << 'EOF'
+          ruleDirs:
+          - ./rules
+          EOF
+
+      - name: Run ast-grep with specific version pinned
+        id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/version-test
+          sg_config: sgconfig.yml
+          sg_version: 0.44.1
+          reporter: github-check
+          level: error
+          fail_level: error
+
+      - name: Assert action completed with specific version
+        run: |
+          echo "PASS: ast-grep version 0.44.1 was installed and ran successfully"

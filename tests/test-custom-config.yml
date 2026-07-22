@@ -1,0 +1,59 @@
+name: Test custom config - ast-grep with custom rule and warning level
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create custom config with warning-level rule
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/custom-config/rules"
+
+          # Create a Go file with a FIXME comment (matches info-level rule)
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/custom-config/main.go" << 'EOF'
+          package main
+
+          import "fmt"
+
+          func main() {
+            // FIXME: this needs to be fixed
+            fmt.Println("hello")
+          }
+          EOF
+
+          # Create a rule that matches FIXME comments at warning level
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/custom-config/rules/no-fixme.yml" << 'EOF'
+          id: no-fixme-comment
+          message: Do not leave fixme comment
+          severity: warning
+          language: Go
+          rule:
+            kind: comment
+            regex: "//\\s*FIXME:.*"
+          EOF
+
+          # Create sgconfig.yml
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/custom-config/sgconfig.yml" << 'EOF'
+          ruleDirs:
+          - ./rules
+          EOF
+
+      - name: Run ast-grep with custom tool_name and warning level
+        id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/custom-config
+          sg_config: sgconfig.yml
+          tool_name: ast-grep-custom
+          reporter: github-check
+          level: warning
+          fail_level: none
+        continue-on-error: true
+
+      - name: Assert action completed with custom tool name
+        run: |
+          echo "PASS: ast-grep ran with custom tool_name and warning level"

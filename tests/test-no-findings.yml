@@ -1,0 +1,59 @@
+name: Test no findings - ast-grep scan with clean code
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create clean Go source file and config for scanning
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/clean-scan/rules"
+
+          # Create a clean Go file with no violations
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/clean-scan/main.go" << 'EOF'
+          package main
+
+          import (
+            "context"
+            "fmt"
+          )
+
+          func main() {
+            ctx := context.Background()
+            fmt.Println(ctx)
+          }
+          EOF
+
+          # Create a rule that matches context.TODO (which is NOT in the clean file)
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/clean-scan/rules/no-context-todo.yml" << 'EOF'
+          id: no-context-todo
+          message: Do not use context.TODO in production code
+          severity: error
+          language: Go
+          rule:
+            pattern: context.TODO()
+          EOF
+
+          # Create sgconfig.yml pointing to the rules directory
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/clean-scan/sgconfig.yml" << 'EOF'
+          ruleDirs:
+          - ./rules
+          EOF
+
+      - name: Run ast-grep action on clean code (expects no findings)
+        id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/clean-scan
+          sg_config: sgconfig.yml
+          reporter: github-check
+          level: error
+          fail_level: error
+
+      - name: Assert action passed with no findings
+        run: |
+          echo "PASS: ast-grep ran on clean code and found no issues"
