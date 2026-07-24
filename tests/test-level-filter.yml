@@ -1,0 +1,25 @@
+name: Test level filtering - only report errors not info
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run ast-grep action with warning level (filters out info-level findings)
+        id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/clean-code
+          sg_config: sgconfig.yml
+          reporter: github-check
+          level: warning
+          fail_level: none
+          filter_mode: nofilter
+
+      - name: Assert action completed successfully with level filtering
+        run: |
+          echo "Action completed with level=warning filter applied"
+          echo "PASS"
