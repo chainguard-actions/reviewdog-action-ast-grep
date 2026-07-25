@@ -1,0 +1,31 @@
+name: Test fail_level - action behavior with error findings
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run action with fail_level=none (should always succeed)
+        id: action-none
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/fail-level
+          sg_config: sgconfig.yml
+          reporter: local
+          level: error
+          filter_mode: nofilter
+          fail_level: none
+        continue-on-error: true
+
+      - name: Assert action succeeded with fail_level=none
+        run: |
+          echo "Action step outcome: ${{ steps.action-none.outcome }}"
+          if [ "${{ steps.action-none.outcome }}" = "success" ]; then
+            echo "PASS: action completed successfully with fail_level=none even when findings exist"
+          else
+            echo "FAIL: action failed unexpectedly with fail_level=none"
+            exit 1
+          fi

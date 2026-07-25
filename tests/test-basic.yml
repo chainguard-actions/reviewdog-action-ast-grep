@@ -1,4 +1,4 @@
-name: Test custom ast-grep version
+name: Test basic usage - ast-grep scan with default config
 on:
   workflow_dispatch:
 jobs:
@@ -11,21 +11,21 @@ jobs:
         uses: .
         with:
           github_token: ${{ github.token }}
-          workdir: tests/fixtures/version-test
+          workdir: tests/fixtures/basic
           sg_config: sgconfig.yml
           reporter: local
           level: info
           filter_mode: nofilter
           fail_level: none
-          sg_version: 0.44.1
         continue-on-error: true
 
-      - name: Assert action succeeded with custom sg_version
+      - name: Assert action completed
         run: |
           echo "Action step outcome: ${{ steps.action.outcome }}"
+          # With fail_level=none, the action should always exit 0
           if [ "${{ steps.action.outcome }}" = "success" ]; then
-            echo "PASS: action completed successfully with custom sg_version=0.44.1"
+            echo "PASS: action completed successfully"
           else
-            echo "FAIL: action failed with custom sg_version"
+            echo "FAIL: action did not complete successfully"
             exit 1
           fi

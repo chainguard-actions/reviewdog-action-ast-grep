@@ -50,8 +50,16 @@ echo '::endgroup::'
 
 echo '::group:: Running ast-grep with reviewdog 🐶 ...'
 
-read -ra sg_flags <<<"${INPUT_SG_FLAGS}"
-read -ra reviewdog_flags <<<"${INPUT_REVIEWDOG_FLAGS}"
+# Build flag arrays to avoid unquoted variable expansion (script injection risk)
+sg_flags=()
+if [ -n "${INPUT_SG_FLAGS}" ]; then
+  read -ra sg_flags <<<"${INPUT_SG_FLAGS}"
+fi
+
+reviewdog_flags=()
+if [ -n "${INPUT_REVIEWDOG_FLAGS}" ]; then
+  read -ra reviewdog_flags <<<"${INPUT_REVIEWDOG_FLAGS}"
+fi
 
 ast-grep scan \
   --config="${INPUT_SG_CONFIG}" \

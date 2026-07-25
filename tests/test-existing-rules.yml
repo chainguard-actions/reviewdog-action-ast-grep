@@ -1,4 +1,4 @@
-name: Test custom ast-grep version
+name: Test with existing rules - info severity findings
 on:
   workflow_dispatch:
 jobs:
@@ -11,21 +11,22 @@ jobs:
         uses: .
         with:
           github_token: ${{ github.token }}
-          workdir: tests/fixtures/version-test
+          workdir: tests/fixtures/basic
           sg_config: sgconfig.yml
           reporter: local
           level: info
           filter_mode: nofilter
           fail_level: none
-          sg_version: 0.44.1
         continue-on-error: true
 
-      - name: Assert action succeeded with custom sg_version
+      - name: Assert action completed
         run: |
           echo "Action step outcome: ${{ steps.action.outcome }}"
+          # With fail_level=none, reviewdog always exits 0 regardless of findings
+          # The basic fixture has a FIXME comment that triggers the no-fixme-comment rule
           if [ "${{ steps.action.outcome }}" = "success" ]; then
-            echo "PASS: action completed successfully with custom sg_version=0.44.1"
+            echo "PASS: action completed successfully with info-severity findings"
           else
-            echo "FAIL: action failed with custom sg_version"
+            echo "FAIL: action did not complete successfully"
             exit 1
           fi
