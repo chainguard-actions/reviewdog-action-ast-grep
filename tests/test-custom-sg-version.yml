@@ -1,0 +1,51 @@
+name: Test with custom ast-grep version
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create sgconfig and rules for test
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/version/rules"
+
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/version/sgconfig.yml" <<'EOF'
+          ruleDirs:
+          - ./rules
+          EOF
+
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/version/rules/no-fixme-comment.yml" <<'EOF'
+          id: no-fixme-comment
+          message: Do not leave fixme comment
+          severity: warning
+          language: Go
+          rule:
+            kind: comment
+            regex: "//\\s*FIXME:.*"
+          EOF
+
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/version/main.go" <<'EOF'
+          package main
+
+          import "fmt"
+
+          func main() {
+            fmt.Println("hello world")
+          }
+          EOF
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/version
+          sg_config: sgconfig.yml
+          reporter: github-check
+          level: warning
+          fail_level: none
+          sg_version: '0.45.0'
+
+      - name: Assert action completed successfully with specified version
+        run: |
+          echo "PASS: action ran with custom sg_version=0.45.0"

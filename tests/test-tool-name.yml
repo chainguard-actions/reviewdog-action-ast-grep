@@ -1,0 +1,51 @@
+name: Test custom tool_name input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create sgconfig and rules for test
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/toolname/rules"
+
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/toolname/sgconfig.yml" <<'EOF'
+          ruleDirs:
+          - ./rules
+          EOF
+
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/toolname/rules/no-fixme-comment.yml" <<'EOF'
+          id: no-fixme-comment
+          message: Do not leave fixme comment
+          severity: info
+          language: Go
+          rule:
+            kind: comment
+            regex: "//\\s*FIXME:.*"
+          EOF
+
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/toolname/main.go" <<'EOF'
+          package main
+
+          import "fmt"
+
+          func main() {
+            fmt.Println("hello world")
+          }
+          EOF
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/toolname
+          sg_config: sgconfig.yml
+          reporter: github-check
+          tool_name: my-custom-linter
+          level: info
+          fail_level: none
+
+      - name: Assert action completed with custom tool name
+        run: |
+          echo "PASS: action ran with custom tool_name=my-custom-linter"

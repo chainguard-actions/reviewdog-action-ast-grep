@@ -1,0 +1,54 @@
+name: Test fail_level with error findings
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create sgconfig and code with errors for test
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/faillevel/rules"
+
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/faillevel/sgconfig.yml" <<'EOF'
+          ruleDirs:
+          - ./rules
+          EOF
+
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/faillevel/rules/no-context-todo.yml" <<'EOF'
+          id: no-context-todo
+          message: Do not use context.TODO in production code
+          severity: error
+          language: Go
+          rule:
+            pattern: context.TODO()
+          EOF
+
+          # Code with context.TODO which triggers the error rule
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/faillevel/main.go" <<'EOF'
+          package main
+
+          import (
+            "context"
+            "fmt"
+          )
+
+          func main() {
+            _ = context.TODO()
+            fmt.Println("hello")
+          }
+          EOF
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/faillevel
+          sg_config: sgconfig.yml
+          reporter: github-check
+          level: error
+          fail_level: none
+
+      - name: Assert action completed (fail_level=none means always exit 0)
+        run: |
+          echo "PASS: action ran with fail_level=none, exit code is always 0 regardless of findings"

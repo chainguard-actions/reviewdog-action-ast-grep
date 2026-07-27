@@ -1,0 +1,67 @@
+name: Test
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  checks: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  test-check:
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+    name: runner (${{ matrix.os }}) / ast-grep (github-check)
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: ./
+        with:
+          github_token: ${{ secrets.github_token }}
+          reporter: github-check
+          level: info
+
+  test-pr-check:
+    if: github.event_name == 'pull_request'
+    name: runner / ast-grep (github-pr-check)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: ./
+        with:
+          github_token: ${{ secrets.github_token }}
+          reporter: github-pr-check
+          level: warning
+
+  test-pr-review:
+    if: github.event_name == 'pull_request'
+    name: runner / ast-grep (github-pr-review)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: ./
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.github_token }}
+          reporter: github-pr-review
+          level: error
+          filter_mode: file
+          fail_level: any
+      - name: check the exit code
+        if: ${{ !success() }}
+        run: echo 'The previous step should fail' && exit 1
+
+  test-sarif:
+    name: runner / ast-grep (sarif)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: ./
+        with:
+          reporter: sarif

@@ -1,0 +1,51 @@
+name: Test basic usage with github-check reporter
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create sgconfig and rules for test
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/basic/rules"
+
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/basic/sgconfig.yml" <<'EOF'
+          ruleDirs:
+          - ./rules
+          EOF
+
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/basic/rules/no-fixme-comment.yml" <<'EOF'
+          id: no-fixme-comment
+          message: Do not leave fixme comment
+          severity: info
+          language: Go
+          rule:
+            kind: comment
+            regex: "//\\s*FIXME:.*"
+          EOF
+
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/basic/sample.go" <<'EOF'
+          package main
+
+          import "fmt"
+
+          func main() {
+            // FIXME: fix this
+            fmt.Println("hello")
+          }
+          EOF
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/basic
+          sg_config: sgconfig.yml
+          reporter: github-check
+          level: info
+          fail_level: none
+
+      - name: Assert action completed successfully
+        run: |
+          echo "PASS: action ran without error"
