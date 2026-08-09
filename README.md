@@ -20,6 +20,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | v1.58.6 | [`v1.58.6`](https://github.com/chainguard-actions/reviewdog-action-ast-grep/tree/v1.58.6) | [`101a596`](https://github.com/reviewdog/action-ast-grep/commit/101a596ee85c62e4621532ae114ffe0fe1ba2fd3) |
 | v1.59 | [`v1.59`](https://github.com/chainguard-actions/reviewdog-action-ast-grep/tree/v1.59) | [`a197c8c`](https://github.com/reviewdog/action-ast-grep/commit/a197c8cc7f06a1577f3ea97d16506dbcce695180) |
 | v1.59.0 | [`v1.59.0`](https://github.com/chainguard-actions/reviewdog-action-ast-grep/tree/v1.59.0) | [`a197c8c`](https://github.com/reviewdog/action-ast-grep/commit/a197c8cc7f06a1577f3ea97d16506dbcce695180) |
+| v1.60.0 | [`v1.60.0`](https://github.com/chainguard-actions/reviewdog-action-ast-grep/tree/v1.60.0) | [`c9e6a6a`](https://github.com/reviewdog/action-ast-grep/commit/c9e6a6a162c7ac9983cb130dee6c69c98ca34fc1) |
 
 ## Privacy
 
