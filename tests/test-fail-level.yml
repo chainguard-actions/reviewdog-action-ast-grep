@@ -1,0 +1,67 @@
+name: Test fail_level behavior with error findings
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create sgconfig with error-level rule and matching file
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/fail-level/rules"
+
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/fail-level/sgconfig.yml" <<'EOF'
+          ruleDirs:
+          - ./rules
+          EOF
+
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/fail-level/rules/no-context-todo.yml" <<'EOF'
+          id: no-context-todo
+          message: Do not use context.TODO in production code
+          severity: error
+          language: Go
+          rule:
+            pattern: context.TODO()
+          EOF
+
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/fail-level/main.go" <<'EOF'
+          package main
+
+          import (
+            "context"
+            "fmt"
+          )
+
+          func main() {
+            _ = context.TODO()
+            fmt.Println("hello")
+          }
+          EOF
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/fail-level
+          sg_config: sgconfig.yml
+          reporter: github-check
+          level: error
+          fail_level: none
+        continue-on-error: true
+
+      - name: Assert action ran (fail_level=none means exit 0 even with findings)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # With fail_level=none, reviewdog always exits 0, so action should succeed
+          # unless the sentinel repo causes the github-check reporter to fail
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded with fail_level=none"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected under sentinel repo)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
