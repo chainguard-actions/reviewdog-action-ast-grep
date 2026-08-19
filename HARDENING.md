@@ -8,28 +8,40 @@
 
 **Test Policy SHA:** `843adf9e4b8f85d0c08b27b9d0b09dd094b54702`
 
-**Harden Agent Version:** `1`
+**Harden Agent Version:** `2`
 
-Action **reviewdog--action-ast-grep/v1.57.3** was hardened automatically. 1 finding(s) were identified and resolved across 1 iteration(s).
+Action **reviewdog--action-ast-grep/v1.57.3** was hardened automatically. 2 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
 ### script-injection (severity: high)
 
-Rule (b) violation: Two unquoted shell variable expansions of user-controlled inputs appear in script.sh. (1) `${INPUT_SG_FLAGS}` on line 52 is passed unquoted as arguments to `ast-grep scan`, allowing shell metacharacter injection from the `inputs.sg_flags` value. The `# shellcheck disable=SC2086` comment confirms intentional word-splitting but does not mitigate injection risk. (2) `${INPUT_REVIEWDOG_FLAGS}` on line 62 is passed unquoted as arguments to `reviewdog`, allowing the same attack via `inputs.reviewdog_flags`. Both variables are sourced from caller-controlled `inputs.*` values set in action.yml's `env:` block and must be double-quoted (or handled with an array) to prevent command injection.
+Rule (b) violation: Two unquoted shell variable expansions of workflow-controllable inputs appear in script.sh (called from action.yml's composite `run:` step). `${INPUT_SG_FLAGS}` (line 57) and `${INPUT_REVIEWDOG_FLAGS}` (line 67) are expanded without double-quoting or the safe guarded form `${VAR:+"$VAR"}`. These variables hold the `inputs.sg_flags` and `inputs.reviewdog_flags` values set by the calling workflow, allowing an attacker to inject shell metacharacters (`;`, `|`, `&`, `$(...)`, etc.) via those inputs. The shellcheck suppression comment `# shellcheck disable=SC2086` on line 53 confirms the author is aware of the unquoted expansion but has not applied the safe guarded form.
 
 Locations:
 
-- `script.sh:52`
-- `script.sh:62`
+- `script.sh:57`
+- `script.sh:67`
+
+### missing-permissions (severity: medium)
+
+None of the five workflow files define a `permissions:` key at the top level or at the job level. Without explicit permissions, workflows run with the default token permissions (which may include `write` access to contents, pull-requests, etc.), violating the principle of least privilege. All five files are affected: depup.yml, labels.yml, release.yml, reviewdog.yml, and test.yml.
+
+Locations:
+
+- `.github/workflows/depup.yml:1`
+- `.github/workflows/labels.yml:1`
+- `.github/workflows/release.yml:1`
+- `.github/workflows/reviewdog.yml:1`
+- `.github/workflows/test.yml:1`
 
 ## Iteration Notes
 
 ### Iteration 1
 
-**Fixes applied:** script-injection
+**Fixes applied:** script-injection, missing-permissions
 
 **Notes:**
 
-Fixed two script injection vulnerabilities in script.sh: (1) Replaced unquoted ${INPUT_SG_FLAGS} on line 52 with a bash array (read -ra sg_flags <<< "${INPUT_SG_FLAGS}") expanded as "${sg_flags[@]}". (2) Replaced unquoted ${INPUT_REVIEWDOG_FLAGS} on line 62 with a bash array (read -ra reviewdog_flags <<< "${INPUT_REVIEWDOG_FLAGS}") expanded as "${reviewdog_flags[@]}". Both fixes allow multiple flags to be passed while preventing shell metacharacter injection. The now-unnecessary # shellcheck disable=SC2086 comment was also removed.
+Fixed script-injection in script.sh by replacing unquoted ${INPUT_SG_FLAGS} and ${INPUT_REVIEWDOG_FLAGS} with the safe guarded form ${VAR:+"$VAR"} to prevent shell metacharacter injection while correctly handling empty optional inputs. Removed the shellcheck disable=SC2086 comment that was suppressing the warning. Added minimum-privilege permissions blocks to all 5 workflow files: depup.yml (contents:write, pull-requests:write), labels.yml (issues:write), release.yml (contents:write, pull-requests:write), reviewdog.yml (contents:read, checks:write, pull-requests:write), and test.yml (contents:read, checks:write, pull-requests:write).
 

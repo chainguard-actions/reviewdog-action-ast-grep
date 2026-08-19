@@ -1,0 +1,6 @@
+id: no-context-todo
+message: Do not use context.TODO in production code
+severity: error
+language: Go
+rule:
+  pattern: context.TODO()

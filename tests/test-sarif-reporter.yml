@@ -1,0 +1,38 @@
+name: Test output file creation
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run ast-grep action and verify output file is created
+        id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/sarif-test
+          sg_config: sgconfig.yml
+          reporter: local
+          filter_mode: nofilter
+          fail_level: none
+          level: error
+          output_dir: '../ast-grep-output'
+
+      - name: Assert output file was created
+        run: |
+          OUTPUT_DIR="${GITHUB_WORKSPACE}/tests/fixtures/ast-grep-output"
+          echo "Checking for output in: $OUTPUT_DIR"
+          if [ ! -d "$OUTPUT_DIR" ]; then
+            echo "FAIL: output directory not found at $OUTPUT_DIR"
+            exit 1
+          fi
+          OUTPUT_FILE=$(find "$OUTPUT_DIR" -name "reviewdog-*" | head -1)
+          if [ -z "$OUTPUT_FILE" ]; then
+            echo "FAIL: No reviewdog output file found in $OUTPUT_DIR"
+            ls -la "$OUTPUT_DIR" || true
+            exit 1
+          fi
+          echo "Found output file: $OUTPUT_FILE"
+          echo "PASS: output file created successfully"
