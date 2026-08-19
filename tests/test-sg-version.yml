@@ -1,0 +1,33 @@
+name: Test specific sg_version
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up workdir with empty config
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/versiontest/rules"
+          cat > "$GITHUB_WORKSPACE/versiontest/sgconfig.yml" <<'EOF'
+          ruleDirs:
+          - ./rules
+          EOF
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: versiontest
+          sg_config: sgconfig.yml
+          reporter: github-check
+          level: error
+          fail_level: none
+          # Pin to a specific version to test the sg_version input
+          sg_version: 0.44.0
+
+      - name: Assert action completed with pinned sg_version
+        run: |
+          echo "Action completed with pinned ast-grep version 0.44.0"
+          echo "PASS"

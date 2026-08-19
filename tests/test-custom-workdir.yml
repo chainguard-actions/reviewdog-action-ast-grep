@@ -1,0 +1,32 @@
+name: Test custom workdir
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up custom workdir with sgconfig
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/myworkdir/rules"
+          cat > "$GITHUB_WORKSPACE/myworkdir/sgconfig.yml" <<'EOF'
+          ruleDirs:
+          - ./rules
+          EOF
+          # No rules = no findings
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: myworkdir
+          sg_config: sgconfig.yml
+          reporter: github-check
+          level: error
+          fail_level: none
+
+      - name: Assert action completed with custom workdir
+        run: |
+          echo "Action completed using custom workdir"
+          echo "PASS"

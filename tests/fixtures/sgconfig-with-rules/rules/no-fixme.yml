@@ -1,0 +1,9 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
+
+id: no-fixme
+message: Do not leave fixme comment
+severity: info
+language: Go
+rule:
+  kind: comment
+  regex: "//\\s*FIXME:.*"
