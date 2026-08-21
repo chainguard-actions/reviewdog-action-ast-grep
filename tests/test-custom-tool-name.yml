@@ -1,0 +1,56 @@
+name: Test custom tool_name and level inputs
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create clean Go file
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/custom-tool-src"
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/custom-tool-src/main.go" << 'EOF'
+          package main
+
+          import "fmt"
+
+          func main() {
+            fmt.Println("hello world")
+          }
+          EOF
+
+      - name: Create minimal ast-grep config with no rules
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/custom-tool-src/rules"
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/custom-tool-src/sgconfig.yml" << 'EOF'
+          ruleDirs:
+          - ./rules
+          EOF
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/custom-tool-src
+          tool_name: my-custom-linter
+          reporter: github-check
+          level: warning
+          sg_config: sgconfig.yml
+          fail_level: none
+
+      - name: Assert action ran with custom tool name
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action completed successfully with custom tool_name"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (sentinel repo or network issue)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

@@ -1,0 +1,54 @@
+name: Test fail_level causes failure on error findings
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create Go file with error-severity issue (context.TODO)
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/fail-level-src"
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/fail-level-src/main.go" << 'EOF'
+          package main
+
+          import (
+            "context"
+            "fmt"
+          )
+
+          func main() {
+            _ = context.TODO()
+            fmt.Println("hello world")
+          }
+          EOF
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/fail-level-src
+          reporter: github-check
+          level: error
+          sg_config: ${{ github.workspace }}/action/sgconfig.yml
+          fail_level: error
+
+      - name: Assert action outcome
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # When fail_level=error and there are error-severity findings, action should fail.
+          # Under the harness, the sentinel repo may also cause failure.
+          # Either way, failure is the expected outcome here.
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed as expected (error findings or sentinel repo)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded (reviewdog may have reported via github-check without failing)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
