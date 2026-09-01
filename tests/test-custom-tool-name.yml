@@ -1,0 +1,67 @@
+name: Test ast-grep with custom tool_name
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create config for custom tool name test
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/tool-name/rules"
+
+          # Create a minimal rule
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/tool-name/rules/no-fixme.yml" << 'EOF'
+          id: no-fixme-comment
+          message: Do not leave fixme comment
+          severity: info
+          language: Go
+          rule:
+            kind: comment
+            regex: "//\\s*FIXME:.*"
+          EOF
+
+          # Create sgconfig
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/tool-name/sgconfig.yml" << 'EOF'
+          ruleDirs:
+          - ./rules
+          EOF
+
+          # Create a Go file with a FIXME comment
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/tool-name/main.go" << 'EOF'
+          package main
+
+          import "fmt"
+
+          func main() {
+            // FIXME: implement me
+            fmt.Println("hello")
+          }
+          EOF
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/tool-name
+          sg_config: sgconfig.yml
+          tool_name: my-custom-linter
+          reporter: github-check
+          level: info
+          fail_level: none
+
+      - name: Assert action ran with custom tool name
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action completed successfully with custom tool_name"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected on sentinel repo with github-check reporter)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

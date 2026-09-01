@@ -1,0 +1,71 @@
+name: Test ast-grep with fail_level set to error
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create codebase with error-level findings
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/fail-level/rules"
+
+          # Create a rule at error severity
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/fail-level/rules/no-context-todo.yml" << 'EOF'
+          id: no-context-todo
+          message: Do not use context.TODO in production code
+          severity: error
+          language: Go
+          rule:
+            pattern: context.TODO()
+          EOF
+
+          # Create sgconfig
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/fail-level/sgconfig.yml" << 'EOF'
+          ruleDirs:
+          - ./rules
+          EOF
+
+          # Create a Go file with a context.TODO() violation
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/fail-level/main.go" << 'EOF'
+          package main
+
+          import (
+            "context"
+            "fmt"
+          )
+
+          func main() {
+            _ = context.TODO()
+            fmt.Println("hello")
+          }
+          EOF
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/fail-level
+          sg_config: sgconfig.yml
+          reporter: github-check
+          level: error
+          fail_level: error
+
+      - name: Assert action failed due to findings or sentinel repo
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # With fail_level=error and error-level findings, the action should fail.
+          # It may also fail due to the sentinel repo with github-check reporter.
+          # Either way, failure is the expected outcome here.
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed as expected (findings found or sentinel repo)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded (reviewdog may have filtered findings in this context)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

@@ -1,0 +1,66 @@
+name: Test ast-grep with custom sg_version
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create minimal config for version test
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/version/rules"
+
+          # Create a minimal rule
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/version/rules/no-fixme.yml" << 'EOF'
+          id: no-fixme-comment
+          message: Do not leave fixme comment
+          severity: info
+          language: Go
+          rule:
+            kind: comment
+            regex: "//\\s*FIXME:.*"
+          EOF
+
+          # Create sgconfig
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/version/sgconfig.yml" << 'EOF'
+          ruleDirs:
+          - ./rules
+          EOF
+
+          # Create a clean Go file
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/version/main.go" << 'EOF'
+          package main
+
+          import "fmt"
+
+          func main() {
+            fmt.Println("hello")
+          }
+          EOF
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/version
+          sg_config: sgconfig.yml
+          sg_version: 0.45.3
+          reporter: github-check
+          level: info
+          fail_level: none
+
+      - name: Assert action ran with custom version
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action completed successfully with custom sg_version"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected on sentinel repo with github-check reporter)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

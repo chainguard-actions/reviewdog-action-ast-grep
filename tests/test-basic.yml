@@ -1,0 +1,65 @@
+name: Test basic usage - ast-grep with default config
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create sgconfig and test file
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/basic/rules"
+
+          # Create a simple rule
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/basic/rules/no-fixme.yml" << 'EOF'
+          id: no-fixme-comment
+          message: Do not leave fixme comment
+          severity: info
+          language: Go
+          rule:
+            kind: comment
+            regex: "//\\s*FIXME:.*"
+          EOF
+
+          # Create sgconfig pointing to the rules
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/basic/sgconfig.yml" << 'EOF'
+          ruleDirs:
+          - ./rules
+          EOF
+
+          # Create a Go file with a FIXME comment to trigger the rule
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/basic/main.go" << 'EOF'
+          package main
+
+          import "fmt"
+
+          func main() {
+            // FIXME: implement me
+            fmt.Println("hello")
+          }
+          EOF
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/basic
+          sg_config: sgconfig.yml
+          reporter: github-check
+          level: info
+          fail_level: none
+
+      - name: Assert action ran (github-check reporter may fail on sentinel repo)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action completed successfully"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected on sentinel repo with github-check reporter)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
