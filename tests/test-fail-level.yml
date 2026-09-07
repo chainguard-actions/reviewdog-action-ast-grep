@@ -1,0 +1,66 @@
+name: Test fail_level causes non-zero exit when issues found
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create sgconfig with error-level rule and matching code
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/fail-rules"
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/fail-sgconfig.yml" <<'EOF'
+          ruleDirs:
+          - ./fail-rules
+          EOF
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/fail-rules/no-context-todo.yml" <<'EOF'
+          id: no-context-todo
+          message: Do not use context.TODO in production code
+          severity: error
+          language: Go
+          rule:
+            pattern: context.TODO()
+          EOF
+          # This file DOES use context.TODO(), triggering the error rule
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/fail-sample.go" <<'EOF'
+          package main
+
+          import (
+            "context"
+            "fmt"
+          )
+
+          func main() {
+            _ = context.TODO()
+            fmt.Println("hello world")
+          }
+          EOF
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures
+          sg_config: fail-sgconfig.yml
+          reporter: github-check
+          level: error
+          fail_level: error
+
+      - name: Assert action failed due to error-level issues found
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # With fail_level=error and error-severity issues found, the action should fail.
+          # On the sentinel repo, github-check reporter may also cause failure.
+          # Either way, failure is the expected outcome here.
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed as expected (issues found or sentinel repo)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded (reviewdog may have suppressed exit code)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

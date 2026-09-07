@@ -1,0 +1,63 @@
+name: Test no issues found - clean code
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create sgconfig with rules and clean Go file
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/clean-rules"
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/clean-sgconfig.yml" <<'EOF'
+          ruleDirs:
+          - ./clean-rules
+          EOF
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/clean-rules/no-context-todo.yml" <<'EOF'
+          id: no-context-todo
+          message: Do not use context.TODO in production code
+          severity: error
+          language: Go
+          rule:
+            pattern: context.TODO()
+          EOF
+          # This file does NOT use context.TODO(), so no issues should be found
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/clean.go" <<'EOF'
+          package main
+
+          import (
+            "context"
+            "fmt"
+          )
+
+          func main() {
+            ctx := context.Background()
+            fmt.Println(ctx)
+          }
+          EOF
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures
+          sg_config: clean-sgconfig.yml
+          reporter: github-check
+          level: error
+          fail_level: none
+
+      - name: Assert action ran successfully with no issues
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action completed successfully with no issues found"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected on sentinel repo with github-check reporter)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

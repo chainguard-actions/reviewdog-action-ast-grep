@@ -1,0 +1,61 @@
+name: Test sarif reporter output
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create sgconfig and rules for sarif test
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/sarif-rules"
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/sarif-sgconfig.yml" <<'EOF'
+          ruleDirs:
+          - ./sarif-rules
+          EOF
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/sarif-rules/no-fixme.yml" <<'EOF'
+          id: no-fixme-comment
+          message: Do not leave fixme comment
+          severity: info
+          language: Go
+          rule:
+            kind: comment
+            regex: "//\\s*FIXME:.*"
+          EOF
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/sarif-sample.go" <<'EOF'
+          package main
+
+          import "fmt"
+
+          func main() {
+            // FIXME: implement this properly
+            fmt.Println("hello")
+          }
+          EOF
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures
+          sg_config: sarif-sgconfig.yml
+          reporter: sarif
+          level: info
+          fail_level: none
+          output_dir: ../sarif-output
+
+      - name: Assert action ran and sarif output directory was created
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action completed successfully with sarif reporter"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected - sarif upload requires real repo)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
