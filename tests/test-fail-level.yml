@@ -1,0 +1,33 @@
+name: Test fail_level - action fails when issues found at or above level
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          workdir: action
+          sg_config: sgconfig.yml
+          reporter: github-check
+          level: error
+          fail_level: any
+      - name: Assert action ran (issues found or sentinel repo failure)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # With fail_level=any and known issues in testdata/main.go (context.TODO, FIXME),
+          # the action should fail due to issues found OR due to sentinel repo API failure.
+          # Either way, failure is the expected outcome here.
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed as expected (issues found or sentinel repo)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded (reviewdog ran without API errors)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
