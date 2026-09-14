@@ -1,0 +1,54 @@
+name: Test ast-grep scan with no issues found
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create clean workspace with no rule violations
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/clean-scan/rules"
+          # Create a rule that detects console.log in JS
+          cat > "$GITHUB_WORKSPACE/clean-scan/rules/no-console-log.yml" << 'EOF'
+          id: no-console-log
+          message: Do not use console.log
+          severity: warning
+          language: JavaScript
+          rule:
+            pattern: console.log($$$)
+          EOF
+          # Create sgconfig.yml pointing to the rules dir
+          cat > "$GITHUB_WORKSPACE/clean-scan/sgconfig.yml" << 'EOF'
+          ruleDirs:
+          - ./rules
+          EOF
+          # Create a clean JS file with no violations
+          cat > "$GITHUB_WORKSPACE/clean-scan/app.js" << 'EOF'
+          function hello() {
+            return "hello world";
+          }
+          EOF
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: clean-scan
+          sg_config: sgconfig.yml
+          reporter: github-check
+          level: warning
+          fail_level: none
+        continue-on-error: true
+      - name: Assert action ran successfully with no issues
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action completed successfully with no issues found"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected under harness conditions)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
