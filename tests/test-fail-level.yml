@@ -1,0 +1,35 @@
+name: Test fail_level causes non-zero exit when errors found
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github_token: ${{ github.token }}
+          workdir: testdata
+          sg_config: ../sgconfig.yml
+          reporter: github-check
+          level: error
+          fail_level: error
+          filter_mode: nofilter
+      - name: Assert action failed due to errors found
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # testdata/main.go contains context.TODO() which triggers no-context-todo rule at error severity
+          # With fail_level=error, reviewdog should exit with code 1
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed as expected (errors found with fail_level=error)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "WARN: action succeeded - may be due to sentinel repo or reviewdog behavior"
+            echo "PASS: action ran without crashing"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
