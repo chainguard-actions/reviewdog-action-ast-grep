@@ -1,0 +1,6 @@
+id: no-println
+message: Avoid using fmt.Println in production code
+severity: warning
+language: Go
+rule:
+  pattern: fmt.Println($$$ARGS)

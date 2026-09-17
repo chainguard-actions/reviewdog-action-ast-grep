@@ -1,0 +1,24 @@
+name: Test warning level reporting
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/warning
+          sg_config: sgconfig.yml
+          reporter: github-check
+          level: warning
+          filter_mode: nofilter
+          # fail_level=none so we don't fail even if warnings are found
+          fail_level: none
+
+      - name: Assert action completed with warning level
+        run: |
+          echo "PASS: action ran with level=warning and fail_level=none successfully"

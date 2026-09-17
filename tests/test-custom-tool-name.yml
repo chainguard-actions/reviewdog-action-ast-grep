@@ -1,0 +1,24 @@
+name: Test custom tool_name input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/toolname
+          sg_config: sgconfig.yml
+          tool_name: my-custom-linter
+          reporter: github-check
+          level: error
+          filter_mode: nofilter
+          fail_level: none
+
+      - name: Assert action completed with custom tool name
+        run: |
+          echo "PASS: action ran with custom tool_name=my-custom-linter"

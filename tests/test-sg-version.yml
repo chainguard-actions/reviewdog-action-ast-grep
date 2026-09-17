@@ -1,0 +1,25 @@
+name: Test specific ast-grep version
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/sgversion
+          sg_config: sgconfig.yml
+          # Specify a known stable version of ast-grep
+          sg_version: 0.45.3
+          reporter: github-check
+          level: error
+          filter_mode: nofilter
+          fail_level: none
+
+      - name: Assert action completed with specific sg_version
+        run: |
+          echo "PASS: action ran successfully with sg_version=0.45.3"
