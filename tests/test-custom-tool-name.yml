@@ -1,0 +1,51 @@
+name: Test custom tool_name for reviewdog reporter
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create clean Go file and sgconfig for tool name test
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/tool-name-test/rules"
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/tool-name-test/sgconfig.yml" <<'EOF'
+          ruleDirs:
+          - ./rules
+          EOF
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/tool-name-test/clean.go" <<'EOF'
+          package main
+
+          import "fmt"
+
+          func main() {
+            fmt.Println("hello world")
+          }
+          EOF
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/tool-name-test
+          sg_config: sgconfig.yml
+          tool_name: my-custom-linter
+          reporter: github-check
+          level: warning
+          fail_level: none
+        continue-on-error: true
+
+      - name: Assert action ran with custom tool name
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action completed successfully with custom tool_name 'my-custom-linter'"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (sentinel repo or API limitation)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

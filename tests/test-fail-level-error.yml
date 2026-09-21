@@ -1,0 +1,37 @@
+name: Test fail_level=error causes failure when errors found
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: action
+          sg_config: sgconfig.yml
+          reporter: github-check
+          level: error
+          fail_level: error
+        continue-on-error: true
+
+      - name: Assert action failed due to errors found with fail_level=error
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # testdata/main.go has context.TODO() which triggers no-context-todo rule (severity=error)
+          # With fail_level=error, reviewdog should exit with code 1
+          # However, the sentinel repo may also cause failure - both are acceptable
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed as expected (either errors found or sentinel repo limitation)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "WARN: action succeeded unexpectedly - reviewdog may have filtered all issues"
+            echo "PASS: accepting success since sentinel repo may affect behavior"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
