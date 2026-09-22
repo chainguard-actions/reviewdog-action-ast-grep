@@ -1,0 +1,54 @@
+name: Test ast-grep scan with no findings
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create clean test files with no violations
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/clean/rules"
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/clean/sgconfig.yml" <<'EOF'
+          ruleDirs:
+          - ./rules
+          EOF
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/clean/rules/no-fixme-comment.yml" <<'EOF'
+          id: no-fixme-comment
+          message: Do not leave fixme comment
+          severity: error
+          language: Go
+          rule:
+            kind: comment
+            regex: "//\\s*FIXME:.*"
+          EOF
+          # Clean Go file with no FIXME comments
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/clean/main.go" <<'EOF'
+          package main
+
+          import "fmt"
+
+          func main() {
+            fmt.Println("hello world")
+          }
+          EOF
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/clean
+          sg_config: sgconfig.yml
+          reporter: github-check
+          level: error
+          fail_level: error
+      - name: Assert action succeeded with no findings
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded with no findings"
+          else
+            echo "FAIL: expected success but got '$OUTCOME'"
+            exit 1
+          fi
