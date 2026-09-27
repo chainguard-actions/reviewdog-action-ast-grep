@@ -10,38 +10,29 @@
 
 **Harden Agent Version:** `2`
 
-Action **reviewdog--action-ast-grep/v1.62.1** was hardened automatically. 2 finding(s) were identified and resolved across 1 iteration(s).
+Action **reviewdog--action-ast-grep/v1.62.1** was hardened automatically. 1 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
 ### script-injection (severity: high)
 
-Rule (b) violation: In script.sh, two workflow-controllable input variables are expanded unquoted in shell commands, allowing an attacker to inject shell metacharacters. `${INPUT_SG_FLAGS}` (line 52) is passed unquoted as flags to `ast-grep scan`, and `${INPUT_REVIEWDOG_FLAGS}` (line 61) is passed unquoted to `reviewdog`. Both variables are set from `${{ inputs.sg_flags }}` and `${{ inputs.reviewdog_flags }}` respectively in action.yml. A calling workflow can supply values containing `;`, `|`, `$(...)`, or other metacharacters to achieve command injection. The `# shellcheck disable=SC2086` comment on line 50 suppresses the shellcheck warning but does not fix the vulnerability. These should be quoted: `"${INPUT_SG_FLAGS}"` and `"${INPUT_REVIEWDOG_FLAGS}"` (or use array-based argument passing).
+Rule (b) violation: Two unquoted shell variable expansions of workflow-controllable inputs in script.sh. `${INPUT_SG_FLAGS}` (line 57) and `${INPUT_REVIEWDOG_FLAGS}` (line 67) are expanded without double-quotes. These variables are populated from `inputs.sg_flags` and `inputs.reviewdog_flags` (both `required: false`, `default: ''`) via the `env:` block in action.yml. An attacker-controlled value containing shell metacharacters (`;`, `|`, `&`, `$(...)`, etc.) would be parsed by the shell, enabling command injection. The correct safe form for optional positional arguments is the guarded expansion `${INPUT_SG_FLAGS:+"$INPUT_SG_FLAGS"}` and `${INPUT_REVIEWDOG_FLAGS:+"$INPUT_REVIEWDOG_FLAGS"}` respectively.
 
 Locations:
 
-- `script.sh:52`
-- `script.sh:61`
-
-### missing-permissions (severity: medium)
-
-None of the workflow files define a top-level `permissions:` block, and no individual job within any of these files defines a `permissions:` block. Without explicit permissions, workflows run with the default token permissions (which may be read/write depending on repository settings), violating the principle of least privilege. Each workflow should declare minimal required permissions.
-
-Locations:
-
-- `.github/workflows/depup.yml:1`
-- `.github/workflows/labels.yml:1`
-- `.github/workflows/release.yml:1`
-- `.github/workflows/reviewdog.yml:1`
-- `.github/workflows/test.yml:1`
+- `script.sh:57`
+- `script.sh:67`
 
 ## Iteration Notes
 
 ### Iteration 1
 
-**Fixes applied:** script-injection, missing-permissions
+**Fixes applied:** script-injection
 
 **Notes:**
 
-Fixed script-injection in script.sh by replacing unquoted ${INPUT_SG_FLAGS} and ${INPUT_REVIEWDOG_FLAGS} with xargs-based bash array tokenization (using the guarded while/read/xargs pattern), then expanding them as "${sg_flags[@]}" and "${reviewdog_flags[@]}". Removed the # shellcheck disable=SC2086 comment. Added top-level permissions blocks to all 5 workflow files: depup.yml (contents:write, pull-requests:write), labels.yml (issues:write), release.yml (contents:write, pull-requests:write), reviewdog.yml (contents:read, checks:write, pull-requests:write), test.yml (contents:read, checks:write, pull-requests:write, security-events:write).
+Fixed two unquoted shell variable expansions in hardened/action/script.sh:
+1. Line 57: Changed `${INPUT_SG_FLAGS}` to `${INPUT_SG_FLAGS:+"$INPUT_SG_FLAGS"}` - uses guarded expansion so the variable is omitted when empty and properly quoted when set.
+2. Line 67: Changed `${INPUT_REVIEWDOG_FLAGS}` to `${INPUT_REVIEWDOG_FLAGS:+"$INPUT_REVIEWDOG_FLAGS"}` - same guarded expansion pattern.
+Also removed the now-unnecessary `# shellcheck disable=SC2086` comment that was suppressing the warning about the previously unquoted expansions. Note: The xargs tokenization approach was not used for INPUT_REVIEWDOG_FLAGS because reviewdog reads from stdin in the pipeline, and piping through xargs would break stdin consumption.
 
