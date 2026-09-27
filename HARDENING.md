@@ -10,38 +10,32 @@
 
 **Harden Agent Version:** `2`
 
-Action **reviewdog--action-ast-grep/v1.57.3** was hardened automatically. 2 finding(s) were identified and resolved across 1 iteration(s).
+Action **reviewdog--action-ast-grep/v1.57.3** was hardened automatically. 1 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
 ### script-injection (severity: high)
 
-Rule (b) violation: Two unquoted shell variable expansions of workflow-controllable inputs appear in script.sh (called from action.yml's composite `run:` step). `${INPUT_SG_FLAGS}` (line 57) and `${INPUT_REVIEWDOG_FLAGS}` (line 67) are expanded without double-quoting or the safe guarded form `${VAR:+"$VAR"}`. These variables hold the `inputs.sg_flags` and `inputs.reviewdog_flags` values set by the calling workflow, allowing an attacker to inject shell metacharacters (`;`, `|`, `&`, `$(...)`, etc.) via those inputs. The shellcheck suppression comment `# shellcheck disable=SC2086` on line 53 confirms the author is aware of the unquoted expansion but has not applied the safe guarded form.
+Rule (b) violation: Two unquoted shell variable expansions of workflow-controllable inputs in script.sh allow shell metacharacter injection.
+
+1. Line 47: `  ${INPUT_SG_FLAGS} |` — INPUT_SG_FLAGS is set from `inputs.sg_flags` (via env: in action.yml) and expanded unquoted in the `ast-grep scan` command. An attacker-controlled caller can inject shell metacharacters (`;`, `|`, `&`, `$(...)`, etc.).
+
+2. Line 57: `    ${INPUT_REVIEWDOG_FLAGS} |` — INPUT_REVIEWDOG_FLAGS is set from `inputs.reviewdog_flags` (via env: in action.yml) and expanded unquoted in the `reviewdog` command. Same injection risk.
+
+The `# shellcheck disable=SC2086` comment on line 46 confirms the author suppressed the linter warning but did not fix the underlying issue. These should use the guarded form `${INPUT_SG_FLAGS:+"$INPUT_SG_FLAGS"}` or be passed via an array to avoid word-splitting on attacker-controlled metacharacters.
 
 Locations:
 
+- `script.sh:47`
 - `script.sh:57`
-- `script.sh:67`
-
-### missing-permissions (severity: medium)
-
-None of the five workflow files define a `permissions:` key at the top level or at the job level. Without explicit permissions, workflows run with the default token permissions (which may include `write` access to contents, pull-requests, etc.), violating the principle of least privilege. All five files are affected: depup.yml, labels.yml, release.yml, reviewdog.yml, and test.yml.
-
-Locations:
-
-- `.github/workflows/depup.yml:1`
-- `.github/workflows/labels.yml:1`
-- `.github/workflows/release.yml:1`
-- `.github/workflows/reviewdog.yml:1`
-- `.github/workflows/test.yml:1`
 
 ## Iteration Notes
 
 ### Iteration 1
 
-**Fixes applied:** script-injection, missing-permissions
+**Fixes applied:** script-injection
 
 **Notes:**
 
-Fixed script-injection in script.sh by replacing unquoted ${INPUT_SG_FLAGS} and ${INPUT_REVIEWDOG_FLAGS} with the safe guarded form ${VAR:+"$VAR"} to prevent shell metacharacter injection while correctly handling empty optional inputs. Removed the shellcheck disable=SC2086 comment that was suppressing the warning. Added minimum-privilege permissions blocks to all 5 workflow files: depup.yml (contents:write, pull-requests:write), labels.yml (issues:write), release.yml (contents:write, pull-requests:write), reviewdog.yml (contents:read, checks:write, pull-requests:write), and test.yml (contents:read, checks:write, pull-requests:write).
+Fixed both unquoted variable expansions in script.sh (lines 47 and 57). Both INPUT_SG_FLAGS and INPUT_REVIEWDOG_FLAGS are now tokenized into bash arrays using the xargs-based NUL-delimited pattern (with required 'if [ -n "$VAR" ]' guards) before the pipeline runs, then expanded with "${array[@]}" to keep each token as a separate properly-quoted argument. The # shellcheck disable=SC2086 comment was removed as it's no longer needed. The fix correctly handles the stdin constraint for reviewdog by building the array before the pipeline starts rather than piping into xargs during the pipeline.
 
