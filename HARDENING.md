@@ -10,38 +10,26 @@
 
 **Harden Agent Version:** `2`
 
-Action **reviewdog--action-ast-grep/v1.59.0** was hardened automatically. 2 finding(s) were identified and resolved across 1 iteration(s).
+Action **reviewdog--action-ast-grep/v1.59.0** was hardened automatically. 1 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
-### permissions (severity: medium)
-
-missing-permissions: None of the workflow files have a top-level `permissions:` key, and no job within any workflow defines its own `permissions:` block. This means workflows run with the default (potentially broad) token permissions. Affected files: depup.yml, labels.yml, release.yml, reviewdog.yml, test.yml.
-
-Locations:
-
-- `.github/workflows/depup.yml:1`
-- `.github/workflows/labels.yml:1`
-- `.github/workflows/release.yml:1`
-- `.github/workflows/reviewdog.yml:1`
-- `.github/workflows/test.yml:1`
-
 ### script-injection (severity: high)
 
-Rule (b) violation: In script.sh, the env vars `${INPUT_SG_FLAGS}` and `${INPUT_REVIEWDOG_FLAGS}` — sourced from `inputs.sg_flags` and `inputs.reviewdog_flags` in action.yml — are expanded **unquoted** in shell command lines. An attacker-controlled caller can inject shell metacharacters (`;`, `|`, `&`, `$(...)`, etc.) through these inputs. Offending lines: `${INPUT_SG_FLAGS} |` (passed as unquoted positional args to `ast-grep scan`) and `${INPUT_REVIEWDOG_FLAGS} |` (passed as unquoted positional args to `reviewdog`). These should be quoted or handled via an array.
+Sub-rule (b) violation: Two unquoted shell variable expansions of workflow-controllable data appear in script.sh. (1) `${INPUT_SG_FLAGS}` on line 52 is passed unquoted as arguments to `ast-grep scan`. (2) `${INPUT_REVIEWDOG_FLAGS}` on line 61 is passed unquoted as arguments to `reviewdog`. Both variables are set from `inputs.sg_flags` and `inputs.reviewdog_flags` respectively (via the `env:` block in action.yml), meaning a caller can inject shell metacharacters (`;`, `|`, `&`, `$(...)`, etc.) to execute arbitrary commands. The `# shellcheck disable=SC2086` comment on line 51 acknowledges the unquoted expansion but does not mitigate the injection risk. These should be quoted or handled via an array to prevent command injection.
 
 Locations:
 
-- `script.sh:49`
-- `script.sh:57`
+- `script.sh:52`
+- `script.sh:61`
 
 ## Iteration Notes
 
 ### Iteration 1
 
-**Fixes applied:** script-injection, permissions
+**Fixes applied:** script-injection
 
 **Notes:**
 
-Fixed script injection in script.sh by replacing unquoted ${INPUT_SG_FLAGS} and ${INPUT_REVIEWDOG_FLAGS} expansions with bash arrays (read -ra + "${array[@]}" expansion), preventing shell metacharacter injection. Added minimal top-level permissions blocks to all 5 workflow files: depup.yml (contents:write, pull-requests:write), labels.yml (issues:write), release.yml (contents:write, pull-requests:write), reviewdog.yml (checks:write, contents:read, pull-requests:write), test.yml (checks:write, contents:read, pull-requests:write).
+Fixed both unquoted variable expansions in script.sh (lines 52 and 61). Replaced unquoted ${INPUT_SG_FLAGS} and ${INPUT_REVIEWDOG_FLAGS} with bash arrays built using the xargs/read-loop tokenization idiom (quote-aware, injection-safe). Each array is guarded with `if [ -n ... ]` to prevent empty-argument injection. Arrays are expanded as "${sg_flags[@]}" and "${reviewdog_flags[@]}". The # shellcheck disable=SC2086 comment was removed since unquoted expansions are no longer used. The reviewdog array is built before the pipeline (not piped into xargs at command time) to preserve reviewdog's stdin.
 

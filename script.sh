@@ -50,15 +50,16 @@ echo '::endgroup::'
 
 echo '::group:: Running ast-grep with reviewdog 🐶 ...'
 
-# Build flag arrays to safely handle optional flags without unquoted expansion
 sg_flags=()
 if [ -n "${INPUT_SG_FLAGS}" ]; then
-  read -ra sg_flags <<< "${INPUT_SG_FLAGS}"
+  while IFS= read -r -d '' t; do sg_flags+=("$t"); done \
+    < <(printf '%s' "${INPUT_SG_FLAGS}" | xargs printf '%s\0')
 fi
 
 reviewdog_flags=()
 if [ -n "${INPUT_REVIEWDOG_FLAGS}" ]; then
-  read -ra reviewdog_flags <<< "${INPUT_REVIEWDOG_FLAGS}"
+  while IFS= read -r -d '' t; do reviewdog_flags+=("$t"); done \
+    < <(printf '%s' "${INPUT_REVIEWDOG_FLAGS}" | xargs printf '%s\0')
 fi
 
 ast-grep scan \
