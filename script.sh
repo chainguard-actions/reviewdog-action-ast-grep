@@ -50,20 +50,22 @@ echo '::endgroup::'
 
 echo '::group:: Running ast-grep with reviewdog 🐶 ...'
 
-# Build flag arrays to avoid unquoted word-splitting injection
-SG_FLAGS_ARRAY=()
-if [ -n "${INPUT_SG_FLAGS}" ]; then
-  read -ra SG_FLAGS_ARRAY <<< "${INPUT_SG_FLAGS}"
+sg_flags=()
+if [ -n "$INPUT_SG_FLAGS" ]; then
+  while IFS= read -r -d '' t; do sg_flags+=("$t"); done \
+    < <(printf '%s' "$INPUT_SG_FLAGS" | xargs printf '%s\0')
 fi
-REVIEWDOG_FLAGS_ARRAY=()
-if [ -n "${INPUT_REVIEWDOG_FLAGS}" ]; then
-  read -ra REVIEWDOG_FLAGS_ARRAY <<< "${INPUT_REVIEWDOG_FLAGS}"
+
+reviewdog_flags=()
+if [ -n "$INPUT_REVIEWDOG_FLAGS" ]; then
+  while IFS= read -r -d '' t; do reviewdog_flags+=("$t"); done \
+    < <(printf '%s' "$INPUT_REVIEWDOG_FLAGS" | xargs printf '%s\0')
 fi
 
 ast-grep scan \
   --config="${INPUT_SG_CONFIG}" \
   --json=compact \
-  "${SG_FLAGS_ARRAY[@]}" |
+  "${sg_flags[@]}" |
   jq -f "${GITHUB_ACTION_PATH}/to-rdjsonl.jq" -c |
   reviewdog \
     -f=rdjsonl \
@@ -73,7 +75,7 @@ ast-grep scan \
     -fail-level="${INPUT_FAIL_LEVEL}" \
     -fail-on-error="${INPUT_FAIL_ON_ERROR}" \
     -level="${INPUT_LEVEL}" \
-    "${REVIEWDOG_FLAGS_ARRAY[@]}" |
+    "${reviewdog_flags[@]}" |
   tee "${INPUT_OUTPUT_DIR}/${OUTPUT_FILE_NAME}"
 
 exit_code=${PIPESTATUS[1]}
