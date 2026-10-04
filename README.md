@@ -38,6 +38,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | v1.63.8 | [`v1.63.8`](https://github.com/chainguard-actions/reviewdog-action-ast-grep/tree/v1.63.8) | [`563b323`](https://github.com/reviewdog/action-ast-grep/commit/563b323a8dc7eec7f593c65a75fe1d0e9f421600) |
 | v1.64.1 | [`v1.64.1`](https://github.com/chainguard-actions/reviewdog-action-ast-grep/tree/v1.64.1) | [`1509c63`](https://github.com/reviewdog/action-ast-grep/commit/1509c63720e066ba0dd3b22f4387d76355c4135e) |
 | v1.64.10 | [`v1.64.10`](https://github.com/chainguard-actions/reviewdog-action-ast-grep/tree/v1.64.10) | [`83a4029`](https://github.com/reviewdog/action-ast-grep/commit/83a4029bed5b1c597f3333b47ec0e9908aea5e6e) |
+| v1.64.11 | [`v1.64.11`](https://github.com/chainguard-actions/reviewdog-action-ast-grep/tree/v1.64.11) | [`ccb4aff`](https://github.com/reviewdog/action-ast-grep/commit/ccb4aff4801ac3f21a071bdc55e045a27fa823b4) |
 | v1.64.5 | [`v1.64.5`](https://github.com/chainguard-actions/reviewdog-action-ast-grep/tree/v1.64.5) | [`e10cdd0`](https://github.com/reviewdog/action-ast-grep/commit/e10cdd080622877dccca466e1824dc3c0125b226) |
 | v1.64.6 | [`v1.64.6`](https://github.com/chainguard-actions/reviewdog-action-ast-grep/tree/v1.64.6) | [`53c8501`](https://github.com/reviewdog/action-ast-grep/commit/53c85019c78803367b5bfc6736e3e50099292026) |
 | v1.64.9 | [`v1.64.9`](https://github.com/chainguard-actions/reviewdog-action-ast-grep/tree/v1.64.9) | [`f13913c`](https://github.com/reviewdog/action-ast-grep/commit/f13913ca4b52f7fe737a9478a068dcefe608117f) |
