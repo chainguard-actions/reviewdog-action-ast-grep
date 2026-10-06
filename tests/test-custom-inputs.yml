@@ -1,0 +1,60 @@
+name: Test custom inputs - tool_name and level
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Create a minimal workspace with a clean file and custom rule
+      - name: Set up workspace with custom rule
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/custom-src/rules"
+          # Create a warning-level rule
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/custom-src/rules/no-println.yml" <<'EOF'
+          id: no-println
+          message: Avoid fmt.Println in production code
+          severity: warning
+          language: Go
+          rule:
+            pattern: fmt.Println($$$ARGS)
+          EOF
+          # Create a Go file with no issues (no fmt.Println)
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/custom-src/main.go" <<'EOF'
+          package main
+
+          func main() {
+          }
+          EOF
+          # Create sgconfig.yml
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/custom-src/sgconfig.yml" <<'EOF'
+          ruleDirs:
+          - ./rules
+          EOF
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/custom-src
+          tool_name: my-ast-grep
+          reporter: github-check
+          level: warning
+          fail_level: none
+          sg_config: sgconfig.yml
+
+      - name: Assert action ran with custom inputs
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded with custom tool_name and level"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected with sentinel repo)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

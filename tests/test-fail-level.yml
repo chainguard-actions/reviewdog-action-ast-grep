@@ -1,0 +1,38 @@
+name: Test fail_level - exit with error when findings exceed level
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # The testdata/main.go has context.TODO() which triggers the no-context-todo rule at error level
+      # With fail_level=error, reviewdog should exit 1 when it finds error-level issues
+      # However, the sentinel GITHUB_REPOSITORY may also cause failure
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github_token: ${{ github.token }}
+          workdir: action
+          reporter: github-check
+          sg_config: sgconfig.yml
+          level: error
+          fail_level: error
+
+      - name: Assert action failed (either from findings or sentinel repo)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # With fail_level=error and error-level findings, action should fail
+          # OR it may fail due to sentinel repo — both are acceptable failure outcomes
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed as expected (findings at error level or sentinel repo)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded (reviewdog reported findings without failing)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

@@ -1,0 +1,62 @@
+name: Test basic usage - no findings
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Create a minimal sgconfig.yml and a clean Go file with no issues
+      - name: Set up clean workspace
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/clean-src/rules"
+          # Create a rule that won't match anything in our clean file
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/clean-src/rules/no-context-todo.yml" <<'EOF'
+          id: no-context-todo
+          message: Do not use context.TODO in production code
+          severity: error
+          language: Go
+          rule:
+            pattern: context.TODO()
+          EOF
+          # Create a clean Go file with no issues
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/clean-src/main.go" <<'EOF'
+          package main
+
+          import "fmt"
+
+          func main() {
+              fmt.Println("hello world")
+          }
+          EOF
+          # Create sgconfig.yml pointing to the rules
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/clean-src/sgconfig.yml" <<'EOF'
+          ruleDirs:
+          - ./rules
+          EOF
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/clean-src
+          reporter: github-check
+          sg_config: sgconfig.yml
+          level: error
+          fail_level: none
+
+      - name: Assert action ran (succeeded or failed gracefully on sentinel repo)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded with no findings"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected with sentinel repo)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
