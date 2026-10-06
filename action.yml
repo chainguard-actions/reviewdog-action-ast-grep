@@ -72,7 +72,7 @@ runs:
         curl "${args[@]}" \
           -d "{\"repository\":\"${GITHUB_REPOSITORY}\",\"action\":\"${GITHUB_ACTION_REPOSITORY}\"}" \
           "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
-    - uses: reviewdog/action-setup@d8a7baabd7f3e8544ee4dbde3ee41d0011c3a93f # v1.5.0
+    - uses: chainguard-actions/reviewdog-action-setup@1ce633154760f8ceb9de1e4c17deb0188ef82866 # v1.5.0
       with:
         reviewdog_version: v0.21.2
     - run: $GITHUB_ACTION_PATH/script.sh
@@ -95,7 +95,7 @@ runs:
         INPUT_SG_FLAGS: ${{ inputs.sg_flags }}
         DEFAULT_SG_VERSION: 0.45.3
     - if: inputs.reporter == 'sarif'
-      uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+      uses: chainguard-actions/github-codeql-action/upload-sarif@05a2b18f97905888db8f883471cc925f1a97a01c # v4.38.2
       with:
         sarif_file: ${{ inputs.output_dir }}
 # Ref: https://haya14busa.github.io/github-action-brandings/
