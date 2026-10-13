@@ -95,7 +95,7 @@ runs:
         INPUT_SG_FLAGS: ${{ inputs.sg_flags }}
         DEFAULT_SG_VERSION: 0.45.3
     - if: inputs.reporter == 'sarif'
-      uses: github/codeql-action/upload-sarif@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
+      uses: chainguard-actions/github-codeql-action/upload-sarif@c9490e7da63f2fba97b09851ae34f51d7905ae38 # v4.38.1
       with:
         sarif_file: ${{ inputs.output_dir }}
 # Ref: https://haya14busa.github.io/github-action-brandings/
