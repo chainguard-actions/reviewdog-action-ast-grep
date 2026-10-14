@@ -1,0 +1,66 @@
+name: Test ast-grep scan with custom tool name and warning level
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create rule and config for custom tool name test
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/custom-tool-rules"
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/custom-tool-rules/no-context-todo.yml" <<'EOF'
+          id: no-context-todo
+          message: Do not use context.TODO in production code
+          severity: warning
+          language: Go
+          rule:
+            pattern: context.TODO()
+          EOF
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/custom-tool-sgconfig.yml" <<'EOF'
+          ruleDirs:
+          - ./tests/fixtures/custom-tool-rules
+          EOF
+
+      - name: Create test Go file with context.TODO (triggers warning)
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/custom-tool-src"
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/custom-tool-src/main.go" <<'EOF'
+          package main
+
+          import (
+              "context"
+              "fmt"
+          )
+
+          func main() {
+              _ = context.TODO()
+              fmt.Println("hello world")
+          }
+          EOF
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: .
+          sg_config: tests/fixtures/custom-tool-sgconfig.yml
+          reporter: github-check
+          filter_mode: nofilter
+          fail_level: none
+          level: warning
+          tool_name: my-ast-grep
+          sg_flags: tests/fixtures/custom-tool-src/
+          output_dir: ../reviewdog-results-custom
+
+      - name: Assert action succeeded with custom tool name
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: expected success but got '$OUTCOME'"
+            exit 1
+          fi
+          echo "PASS: action ran successfully with custom tool_name"

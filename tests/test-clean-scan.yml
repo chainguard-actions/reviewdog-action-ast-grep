@@ -1,0 +1,67 @@
+name: Test ast-grep scan with no findings
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create clean Go file with no issues
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/clean-src"
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/clean-src/clean.go" <<'EOF'
+          package main
+
+          import (
+              "context"
+              "fmt"
+          )
+
+          func main() {
+              ctx := context.Background()
+              fmt.Println(ctx)
+          }
+          EOF
+
+      - name: Create sgconfig for clean scan
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/clean-rules"
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/clean-rules/no-context-todo.yml" <<'EOF'
+          id: no-context-todo
+          message: Do not use context.TODO in production code
+          severity: error
+          language: Go
+          rule:
+            pattern: context.TODO()
+          EOF
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/clean-sgconfig.yml" <<'EOF'
+          ruleDirs:
+          - ./tests/fixtures/clean-rules
+          EOF
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: .
+          sg_config: tests/fixtures/clean-sgconfig.yml
+          reporter: github-check
+          filter_mode: nofilter
+          fail_level: any
+          level: error
+          sg_flags: tests/fixtures/clean-src/
+
+      - name: Assert action succeeded with no findings
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The clean.go file uses context.Background() not context.TODO(),
+          # so no findings should be reported and the action should succeed
+          # even with fail_level=any.
+          if [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: expected success (no findings) but got '$OUTCOME'"
+            exit 1
+          fi
+          echo "PASS: action succeeded with no findings as expected"

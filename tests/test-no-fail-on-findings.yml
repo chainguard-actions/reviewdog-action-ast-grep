@@ -1,0 +1,67 @@
+name: Test ast-grep scan with fail_level=none (default)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create rule and config for no-fail test
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/no-fail-rules"
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/no-fail-rules/no-context-todo.yml" <<'EOF'
+          id: no-context-todo
+          message: Do not use context.TODO in production code
+          severity: error
+          language: Go
+          rule:
+            pattern: context.TODO()
+          EOF
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/no-fail-sgconfig.yml" <<'EOF'
+          ruleDirs:
+          - ./tests/fixtures/no-fail-rules
+          EOF
+
+      - name: Create test Go file with context.TODO (triggers error finding)
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/no-fail-src"
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/no-fail-src/main.go" <<'EOF'
+          package main
+
+          import (
+              "context"
+              "fmt"
+          )
+
+          func main() {
+              _ = context.TODO()
+              fmt.Println("hello world")
+          }
+          EOF
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: .
+          sg_config: tests/fixtures/no-fail-sgconfig.yml
+          reporter: github-check
+          filter_mode: nofilter
+          fail_level: none
+          level: error
+          sg_flags: tests/fixtures/no-fail-src/
+
+      - name: Assert action succeeded with fail_level=none
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # With fail_level=none, reviewdog always exits 0 regardless of findings.
+          # The test file has context.TODO() (error level) but the action
+          # should still succeed because fail_level=none.
+          if [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: expected success with fail_level=none but got '$OUTCOME'"
+            exit 1
+          fi
+          echo "PASS: action succeeded with fail_level=none as expected"

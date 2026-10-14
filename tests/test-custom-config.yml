@@ -1,0 +1,63 @@
+name: Test ast-grep scan with custom sgconfig
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create custom sgconfig with single info-level rule
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/custom-rules"
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/custom-rules/no-fixme.yml" <<'EOF'
+          # yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
+          id: no-fixme-comment
+          message: Do not leave fixme comment
+          severity: info
+          language: Go
+          rule:
+            kind: comment
+            regex: "//\\s*FIXME:.*"
+          EOF
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/custom-sgconfig.yml" <<'EOF'
+          ruleDirs:
+          - ./tests/fixtures/custom-rules
+          EOF
+
+      - name: Create test Go file with FIXME comment
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/src"
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/src/main.go" <<'EOF'
+          package main
+
+          import "fmt"
+
+          func main() {
+              // FIXME: implement this properly
+              fmt.Println("hello")
+          }
+          EOF
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: .
+          sg_config: tests/fixtures/custom-sgconfig.yml
+          reporter: github-check
+          filter_mode: nofilter
+          fail_level: none
+          level: info
+          sg_flags: tests/fixtures/src/
+
+      - name: Assert action succeeded with custom config
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: expected success but got '$OUTCOME'"
+            exit 1
+          fi
+          echo "PASS: action ran successfully with custom sgconfig"
