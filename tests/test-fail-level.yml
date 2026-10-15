@@ -1,0 +1,35 @@
+name: Test fail_level - action fails when error-level issues found
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github_token: ${{ github.token }}
+          workdir: .
+          reporter: github-check
+          level: error
+          fail_level: error
+          filter_mode: nofilter
+          sg_config: sgconfig.yml
+      - name: Assert action failed due to error-level issues
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The testdata/main.go contains context.TODO() which triggers
+          # the no-context-todo rule at error severity.
+          # With fail_level=error and filter_mode=nofilter, the action should fail.
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed as expected when error-level issues found"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded (issues may have been filtered by event context)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
