@@ -1,0 +1,8 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
+
+id: no-eval
+message: Do not use eval
+severity: error
+language: JavaScript
+rule:
+  pattern: eval($ARG)

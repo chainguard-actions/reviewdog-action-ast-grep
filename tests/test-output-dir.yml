@@ -1,0 +1,33 @@
+name: Test custom output_dir creates result file
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/sgconfig-clean
+          sg_config: sgconfig.yml
+          reporter: github-check
+          level: error
+          fail_level: none
+          output_dir: /tmp/reviewdog-output
+      - name: Assert output directory and result file were created
+        run: |
+          echo "Checking output directory..."
+          if [ ! -d "/tmp/reviewdog-output" ]; then
+            echo "FAIL: output directory /tmp/reviewdog-output was not created"
+            exit 1
+          fi
+          echo "Output directory exists"
+          ls -la /tmp/reviewdog-output/
+          # The result file should be named reviewdog-ast-grep (default tool_name)
+          if [ ! -f "/tmp/reviewdog-output/reviewdog-ast-grep" ]; then
+            echo "FAIL: expected result file reviewdog-ast-grep not found in output dir"
+            exit 1
+          fi
+          echo "PASS: output directory and result file were created successfully"

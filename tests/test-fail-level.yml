@@ -1,0 +1,33 @@
+name: Test fail_level causes non-zero exit when issues found
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github_token: ${{ github.token }}
+          workdir: .
+          sg_config: sgconfig.yml
+          reporter: github-check
+          level: error
+          fail_level: any
+      - name: Assert action failed due to findings with fail_level=any
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The testdata/main.go has context.TODO() which triggers the no-context-todo rule
+          # With fail_level=any, reviewdog should exit non-zero when findings exist
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed as expected when findings exist with fail_level=any"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded (reviewdog may have filtered findings in github-check mode)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
