@@ -77,7 +77,7 @@ runs:
         curl "${args[@]}" \
           -d "{\"repository\":\"${GITHUB_REPOSITORY}\",\"action\":\"${GITHUB_ACTION_REPOSITORY}\"}" \
           "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
-    - uses: reviewdog/action-setup@d8a7baabd7f3e8544ee4dbde3ee41d0011c3a93f # v1.5.0
+    - uses: chainguard-actions/reviewdog-action-setup@1ce633154760f8ceb9de1e4c17deb0188ef82866 # v1.5.0
       with:
         reviewdog_version: v0.21.2
     - run: $GITHUB_ACTION_PATH/script.sh
@@ -101,7 +101,7 @@ runs:
         INPUT_CUSTOM_LANGUAGES: ${{ inputs.custom_languages }}
         DEFAULT_SG_VERSION: 0.51.0
     - if: inputs.reporter == 'sarif'
-      uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+      uses: chainguard-actions/github-codeql-action/upload-sarif@af9a71138d91d5fb30bfcfc73aff470163092543 # v4.39.0
       with:
         sarif_file: ${{ inputs.output_dir }}
 
