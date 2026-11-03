@@ -1,0 +1,38 @@
+name: Test basic violation detection
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          workdir: tests/fixtures/sg-violation
+          reporter: local
+          filter_mode: nofilter
+          output_dir: /tmp/rd-basic
+      - name: Assert violation reported
+        run: |
+          F=/tmp/rd-basic/reviewdog-ast-grep
+          if [ ! -f "$F" ]; then
+            echo "FAIL: output file $F not found"
+            exit 1
+          fi
+          echo "---- output ----"
+          cat "$F"
+          echo "----------------"
+          if ! grep -q "Avoid console.log in production code" "$F"; then
+            echo "FAIL: expected console.log violation message"
+            exit 1
+          fi
+          if ! grep -q "app.js" "$F"; then
+            echo "FAIL: expected app.js in output"
+            exit 1
+          fi
+          if grep -q "Avoid debugger statements" "$F"; then
+            echo "FAIL: alt rule should not be active with default config"
+            exit 1
+          fi
+          echo "PASS"

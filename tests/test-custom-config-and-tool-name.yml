@@ -1,0 +1,38 @@
+name: Test custom sg_config and tool_name
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          workdir: tests/fixtures/sg-violation
+          sg_config: alt-sgconfig.yml
+          tool_name: my-sg
+          level: warning
+          reporter: local
+          filter_mode: nofilter
+          output_dir: /tmp/rd-custom
+      - name: Assert custom config used and output named after tool_name
+        run: |
+          F=/tmp/rd-custom/reviewdog-my-sg
+          ls -la /tmp/rd-custom || true
+          if [ ! -f "$F" ]; then
+            echo "FAIL: expected output file $F (named after tool_name)"
+            exit 1
+          fi
+          echo "---- output ----"
+          cat "$F"
+          echo "----------------"
+          if ! grep -q "Avoid debugger statements" "$F"; then
+            echo "FAIL: expected debugger rule finding from alt config"
+            exit 1
+          fi
+          if grep -q "Avoid console.log" "$F"; then
+            echo "FAIL: default-config rule should not run with alt config"
+            exit 1
+          fi
+          echo "PASS"

@@ -1,0 +1,6 @@
+id: no-debugger
+language: JavaScript
+severity: warning
+message: Avoid debugger statements
+rule:
+  kind: debugger_statement
