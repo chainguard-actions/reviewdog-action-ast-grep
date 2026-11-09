@@ -16,12 +16,12 @@ Action **reviewdog--action-ast-grep/v1.62.3** was hardened automatically. 1 find
 
 ### script-injection (severity: high)
 
-Rule (b) violation: Two unquoted shell variable expansions of workflow-controllable (untrusted) inputs in script.sh. (1) `${INPUT_SG_FLAGS}` on the `ast-grep scan` command line is unquoted — this env var holds `inputs.sg_flags` and allows an attacker to inject shell metacharacters (`;`, `|`, `&`, `$(...)`, glob chars, whitespace word-splitting) into the command. (2) `${INPUT_REVIEWDOG_FLAGS}` passed to `reviewdog` is similarly unquoted and holds `inputs.reviewdog_flags`. Both should be quoted as `"${INPUT_SG_FLAGS}"` / `"${INPUT_REVIEWDOG_FLAGS}"` (or use the guarded form `${VAR:+"$VAR"}` if they are optional multi-word flag lists that must be omitted when empty). The `# shellcheck disable=SC2086` comment suppresses the shellcheck warning but does not eliminate the security risk.
+Rule (b): two inputs set by the calling workflow are expanded unquoted in script.sh, which the composite action's run step executes. Line 57 has `${INPUT_SG_FLAGS} |` (from inputs.sg_flags) as arguments to `ast-grep scan`. Line 67 has `${INPUT_REVIEWDOG_FLAGS} |` (from inputs.reviewdog_flags) as arguments to `reviewdog`. Neither is the exempt array-assignment form NAME=($VAR). Both are bare expansions inside a command, so the shell splits the values on whitespace and expands glob characters in them. Fix: build arrays with the exempt hardened form, e.g. `# shellcheck disable=SC2086` then `SG_FLAGS=(${INPUT_SG_FLAGS})`, and pass them as "${SG_FLAGS[@]}". Do the same for INPUT_REVIEWDOG_FLAGS.
 
 Locations:
 
-- `script.sh:49`
 - `script.sh:57`
+- `script.sh:67`
 
 ## Iteration Notes
 
@@ -31,8 +31,5 @@ Locations:
 
 **Notes:**
 
-Fixed both unquoted flag list expansions in script.sh:
-1. INPUT_SG_FLAGS (line 49): Tokenized into bash array 'sg_flags' using xargs with NUL-delimited output and a read loop, guarded by 'if [ -n ... ]'. Expanded as "${sg_flags[@]}" in the ast-grep scan command.
-2. INPUT_REVIEWDOG_FLAGS (line 57): Similarly tokenized into 'reviewdog_flags' array before the pipeline (to avoid stdin conflict since reviewdog reads piped input). Expanded as "${reviewdog_flags[@]}" in the reviewdog command.
-Removed the '# shellcheck disable=SC2086' comment that was suppressing the warning. The script uses #!/bin/bash so bash arrays and process substitution are appropriate.
+In script.sh, the inputs `INPUT_SG_FLAGS` and `INPUT_REVIEWDOG_FLAGS` are now loaded into arrays with unquoted assignment (`SG_FLAGS=(${INPUT_SG_FLAGS})`, `REVIEWDOG_FLAGS=(${INPUT_REVIEWDOG_FLAGS})`, with a shellcheck disable comment). The arrays are then passed to the commands as `${ARR[@]+"${ARR[@]}"}`, so an empty input adds no argument, even on bash 3.2 with `set -u`. Values are still split on whitespace and globbed exactly as upstream did, and `PIPESTATUS[1]` still gives reviewdog's exit code. Nothing was run to test this.
 
