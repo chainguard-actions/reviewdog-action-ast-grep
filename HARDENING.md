@@ -16,18 +16,12 @@ Action **reviewdog--action-ast-grep/v1.57.3** was hardened automatically. 1 find
 
 ### script-injection (severity: high)
 
-Rule (b) violation: Two unquoted shell variable expansions of workflow-controllable inputs in script.sh allow shell metacharacter injection.
-
-1. Line 47: `  ${INPUT_SG_FLAGS} |` — INPUT_SG_FLAGS is set from `inputs.sg_flags` (via env: in action.yml) and expanded unquoted in the `ast-grep scan` command. An attacker-controlled caller can inject shell metacharacters (`;`, `|`, `&`, `$(...)`, etc.).
-
-2. Line 57: `    ${INPUT_REVIEWDOG_FLAGS} |` — INPUT_REVIEWDOG_FLAGS is set from `inputs.reviewdog_flags` (via env: in action.yml) and expanded unquoted in the `reviewdog` command. Same injection risk.
-
-The `# shellcheck disable=SC2086` comment on line 46 confirms the author suppressed the linter warning but did not fix the underlying issue. These should use the guarded form `${INPUT_SG_FLAGS:+"$INPUT_SG_FLAGS"}` or be passed via an array to avoid word-splitting on attacker-controlled metacharacters.
+Rule (b): script.sh, which action.yml's run: step calls, expands two workflow-controlled inputs without quotes, straight into command arguments: `${INPUT_SG_FLAGS}` (from inputs.sg_flags) on line 57, passed to `ast-grep scan`, and `${INPUT_REVIEWDOG_FLAGS}` (from inputs.reviewdog_flags) on line 67, passed to `reviewdog`. A '# shellcheck disable=SC2086' comment is present, but these are not NAME=($VAR) array assignments, so the hardened-list exemption does not apply. The values are split on whitespace and glob-expanded without control. Fix: split them into arrays using the exempt form (e.g. `# shellcheck disable=SC2086` on the line above `SG_FLAGS=($INPUT_SG_FLAGS)`), then pass them as "${SG_FLAGS[@]}".
 
 Locations:
 
-- `script.sh:47`
 - `script.sh:57`
+- `script.sh:67`
 
 ## Iteration Notes
 
@@ -37,5 +31,5 @@ Locations:
 
 **Notes:**
 
-Fixed both unquoted variable expansions in script.sh (lines 47 and 57). Both INPUT_SG_FLAGS and INPUT_REVIEWDOG_FLAGS are now tokenized into bash arrays using the xargs-based NUL-delimited pattern (with required 'if [ -n "$VAR" ]' guards) before the pipeline runs, then expanded with "${array[@]}" to keep each token as a separate properly-quoted argument. The # shellcheck disable=SC2086 comment was removed as it's no longer needed. The fix correctly handles the stdin constraint for reviewdog by building the array before the pipeline starts rather than piping into xargs during the pipeline.
+script.sh: INPUT_SG_FLAGS and INPUT_REVIEWDOG_FLAGS are now split into arrays with the unquoted assignment form, each with '# shellcheck disable=SC2086' on the line above: SG_FLAGS=($INPUT_SG_FLAGS) and REVIEWDOG_FLAGS=($INPUT_REVIEWDOG_FLAGS). They are passed as "${SG_FLAGS[@]}" and "${REVIEWDOG_FLAGS[@]}". The flags split on whitespace and expand globs just as upstream's unquoted expansion did, and an empty value adds no argument. The script uses bash and does not set -u, so this also works on the bash 3.2 that ships on macOS. The pipeline layout and the PIPESTATUS index are unchanged.
 
