@@ -1,0 +1,45 @@
+name: Test local reporter finds violation
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          workdir: tests/fixtures/sg-violation
+          reporter: local
+          filter_mode: nofilter
+          output_dir: /tmp/rd-out-violation
+      - name: Assert step succeeded
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: expected success"
+            exit 1
+          fi
+          echo "PASS"
+      - name: Assert output file reports the violation
+        run: |
+          f=/tmp/rd-out-violation/reviewdog-ast-grep
+          if [ ! -f "$f" ]; then
+            echo "FAIL: output file $f not found"
+            ls -la /tmp/rd-out-violation || true
+            exit 1
+          fi
+          echo "--- output ---"
+          cat "$f"
+          echo "--------------"
+          if ! grep -q "Do not use console.log" "$f"; then
+            echo "FAIL: expected violation message in output"
+            exit 1
+          fi
+          if ! grep -q "app.js" "$f"; then
+            echo "FAIL: expected app.js in output"
+            exit 1
+          fi
+          echo "PASS"
