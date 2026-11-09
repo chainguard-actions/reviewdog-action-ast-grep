@@ -50,10 +50,16 @@ echo '::endgroup::'
 
 echo '::group:: Running ast-grep with reviewdog 🐶 ...'
 
+# Same whitespace split and glob as upstream's unquoted expansions.
+# shellcheck disable=SC2086,SC2206
+SG_FLAGS=(${INPUT_SG_FLAGS})
+# shellcheck disable=SC2086,SC2206
+RD_FLAGS=(${INPUT_REVIEWDOG_FLAGS})
+
 ast-grep scan \
   --config="${INPUT_SG_CONFIG}" \
   --json=compact \
-  ${INPUT_SG_FLAGS:+"$INPUT_SG_FLAGS"} |
+  ${SG_FLAGS[@]+"${SG_FLAGS[@]}"} |
   jq -f "${GITHUB_ACTION_PATH}/to-rdjsonl.jq" -c |
   reviewdog \
     -f=rdjsonl \
@@ -63,7 +69,7 @@ ast-grep scan \
     -fail-level="${INPUT_FAIL_LEVEL}" \
     -fail-on-error="${INPUT_FAIL_ON_ERROR}" \
     -level="${INPUT_LEVEL}" \
-    ${INPUT_REVIEWDOG_FLAGS:+"$INPUT_REVIEWDOG_FLAGS"} |
+    ${RD_FLAGS[@]+"${RD_FLAGS[@]}"} |
   tee "${INPUT_OUTPUT_DIR}/${OUTPUT_FILE_NAME}"
 
 exit_code=${PIPESTATUS[1]}

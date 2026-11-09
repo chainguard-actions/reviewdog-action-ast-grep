@@ -16,7 +16,7 @@ Action **reviewdog--action-ast-grep/v1.62.1** was hardened automatically. 1 find
 
 ### script-injection (severity: high)
 
-Rule (b) violation: Two unquoted shell variable expansions of workflow-controllable inputs in script.sh. `${INPUT_SG_FLAGS}` (line 57) and `${INPUT_REVIEWDOG_FLAGS}` (line 67) are expanded without double-quotes. These variables are populated from `inputs.sg_flags` and `inputs.reviewdog_flags` (both `required: false`, `default: ''`) via the `env:` block in action.yml. An attacker-controlled value containing shell metacharacters (`;`, `|`, `&`, `$(...)`, etc.) would be parsed by the shell, enabling command injection. The correct safe form for optional positional arguments is the guarded expansion `${INPUT_SG_FLAGS:+"$INPUT_SG_FLAGS"}` and `${INPUT_REVIEWDOG_FLAGS:+"$INPUT_REVIEWDOG_FLAGS"}` respectively.
+Rule (b): script.sh, which the composite step runs, expands two values from workflow inputs unquoted as command arguments. Line 57 passes `${INPUT_SG_FLAGS}` (from inputs.sg_flags) to `ast-grep scan`. Line 67 passes `${INPUT_REVIEWDOG_FLAGS}` (from inputs.reviewdog_flags) to `reviewdog`. The '# shellcheck disable=SC2086' comment sits on a command, not on an array assignment, so the array exemption does not apply. Suggested fix, which keeps the whitespace-separated list behaviour: assign each value to an array first, with the shellcheck comment on the line above, e.g. `SG_FLAGS=(${INPUT_SG_FLAGS})` and `RD_FLAGS=(${INPUT_REVIEWDOG_FLAGS})`, then pass "${SG_FLAGS[@]}" and "${RD_FLAGS[@]}".
 
 Locations:
 
@@ -31,8 +31,5 @@ Locations:
 
 **Notes:**
 
-Fixed two unquoted shell variable expansions in hardened/action/script.sh:
-1. Line 57: Changed `${INPUT_SG_FLAGS}` to `${INPUT_SG_FLAGS:+"$INPUT_SG_FLAGS"}` - uses guarded expansion so the variable is omitted when empty and properly quoted when set.
-2. Line 67: Changed `${INPUT_REVIEWDOG_FLAGS}` to `${INPUT_REVIEWDOG_FLAGS:+"$INPUT_REVIEWDOG_FLAGS"}` - same guarded expansion pattern.
-Also removed the now-unnecessary `# shellcheck disable=SC2086` comment that was suppressing the warning about the previously unquoted expansions. Note: The xargs tokenization approach was not used for INPUT_REVIEWDOG_FLAGS because reviewdog reads from stdin in the pipeline, and piping through xargs would break stdin consumption.
+In script.sh, INPUT_SG_FLAGS and INPUT_REVIEWDOG_FLAGS are now each loaded into a bash array (SG_FLAGS=(${INPUT_SG_FLAGS}), RD_FLAGS=(${INPUT_REVIEWDOG_FLAGS})), with shellcheck disable comments on the assignment lines. The arrays are passed to ast-grep and reviewdog as ${ARR[@]+"${ARR[@]}"}, which is safe on bash 3.2 (macOS) when an array is empty. Splitting and globbing work as upstream's did, and the pipeline layout is unchanged, so reviewdog still reads from stdin and the PIPESTATUS index stays the same.
 
