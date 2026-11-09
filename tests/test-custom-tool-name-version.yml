@@ -1,0 +1,36 @@
+name: Test explicit sg_version and custom tool_name
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          workdir: tests/fixtures/sg
+          reporter: local
+          filter_mode: nofilter
+          level: warning
+          tool_name: my-sg
+          sg_version: 0.44.0
+          output_dir: /tmp/rd-custom
+      - name: Assert output file named after tool_name with finding
+        run: |
+          f=/tmp/rd-custom/reviewdog-my-sg
+          ls -la /tmp/rd-custom || true
+          if [ ! -f "$f" ]; then
+            echo "FAIL: output file $f not found"
+            exit 1
+          fi
+          cat "$f"
+          if ! grep -q "Avoid console.log" "$f"; then
+            echo "FAIL: expected finding in output"
+            exit 1
+          fi
+          if [ -f /tmp/rd-custom/reviewdog-ast-grep ]; then
+            echo "FAIL: default-named output should not exist"
+            exit 1
+          fi
+          echo "PASS"

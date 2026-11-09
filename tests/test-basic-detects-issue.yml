@@ -1,0 +1,34 @@
+name: Test basic usage detects an issue (local reporter)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          workdir: tests/fixtures/sg
+          reporter: local
+          filter_mode: nofilter
+          output_dir: /tmp/rd-basic
+      - name: Assert output file contains the finding
+        run: |
+          f=/tmp/rd-basic/reviewdog-ast-grep
+          if [ ! -f "$f" ]; then
+            echo "FAIL: output file $f not found"
+            ls -la /tmp/rd-basic || true
+            exit 1
+          fi
+          echo "--- output ---"
+          cat "$f"
+          if ! grep -q "Avoid console.log" "$f"; then
+            echo "FAIL: expected finding message in output"
+            exit 1
+          fi
+          if ! grep -q "sample.js" "$f"; then
+            echo "FAIL: expected sample.js in output"
+            exit 1
+          fi
+          echo "PASS"

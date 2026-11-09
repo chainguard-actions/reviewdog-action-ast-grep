@@ -1,0 +1,29 @@
+name: Test sg_flags are passed to ast-grep (filter excludes rule)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          workdir: tests/fixtures/sg
+          reporter: local
+          filter_mode: nofilter
+          sg_flags: --filter nonexistent-rule-xyz
+          output_dir: /tmp/rd-flags
+      - name: Assert no findings because the filter excluded the rule
+        run: |
+          f=/tmp/rd-flags/reviewdog-ast-grep
+          if [ ! -f "$f" ]; then
+            echo "FAIL: output file $f not found"
+            exit 1
+          fi
+          cat "$f"
+          if grep -q "Avoid console.log" "$f"; then
+            echo "FAIL: sg_flags --filter was not applied"
+            exit 1
+          fi
+          echo "PASS"
