@@ -10,27 +10,18 @@
 
 **Harden Agent Version:** `2`
 
-Action **reviewdog--action-ast-grep/v1.64.6** was hardened automatically. 2 finding(s) were identified and resolved across 1 iteration(s).
+Action **reviewdog--action-ast-grep/v1.64.6** was hardened automatically. 1 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
 ### script-injection (severity: high)
 
-Rule (b) violation: In script.sh, the shell variable ${INPUT_SG_FLAGS} is expanded unquoted on the ast-grep command line (line ~48: `${INPUT_SG_FLAGS} |`). This variable is sourced from inputs.sg_flags (set via `INPUT_SG_FLAGS: ${{ inputs.sg_flags }}` in action.yml), which is attacker-controlled. An unquoted expansion allows shell metacharacters (`;`, `|`, `&`, `$(...)`, etc.) embedded in the input to be interpreted by the shell, enabling command injection.
-
-Locations:
-
-- `script.sh:48`
-- `action.yml:72`
-
-### script-injection (severity: high)
-
-Rule (b) violation: In script.sh, the shell variable ${INPUT_REVIEWDOG_FLAGS} is expanded unquoted on the reviewdog command line (line ~57: `${INPUT_REVIEWDOG_FLAGS} |`). This variable is sourced from inputs.reviewdog_flags (set via `INPUT_REVIEWDOG_FLAGS: ${{ inputs.reviewdog_flags }}` in action.yml), which is attacker-controlled. An unquoted expansion allows shell metacharacters (`;`, `|`, `&`, `$(...)`, etc.) embedded in the input to be interpreted by the shell, enabling command injection.
+Rule (b): script.sh, which is run by action.yml's composite run step, expands two workflow-controlled env vars without quotes as command arguments. These are `${INPUT_SG_FLAGS} |` on line 57 (from inputs.sg_flags) and `${INPUT_REVIEWDOG_FLAGS} |` on line 67 (from inputs.reviewdog_flags). A '# shellcheck disable=SC2086' comment sits above the pipeline, but these are not NAME=($VAR) array assignments, so the exemption does not apply. Recommended fix: split each value into an array on a line marked '# shellcheck disable=SC2086' (e.g. SG_FLAGS=(${INPUT_SG_FLAGS})), then pass the array quoted, as "${SG_FLAGS[@]}".
 
 Locations:
 
 - `script.sh:57`
-- `action.yml:68`
+- `script.sh:67`
 
 ## Iteration Notes
 
@@ -40,8 +31,5 @@ Locations:
 
 **Notes:**
 
-Fixed two script-injection vulnerabilities in script.sh:
-1. ${INPUT_SG_FLAGS} (line ~48): Replaced unquoted expansion with xargs-based tokenization into bash array `sg_flags`, expanded as "${sg_flags[@]}".
-2. ${INPUT_REVIEWDOG_FLAGS} (line ~57): Replaced unquoted expansion with xargs-based tokenization into bash array `reviewdog_flags`, expanded as "${reviewdog_flags[@]}".
-Both fixes use the required `if [ -n "$VAR" ]` guard, `printf '%s'` to avoid flag interpretation, NUL-delimited xargs output with `read -r -d ''` loop, and safe array expansion. The script already uses #!/bin/bash so bash arrays are available.
+In script.sh, `${INPUT_SG_FLAGS}` and `${INPUT_REVIEWDOG_FLAGS}` are now split into arrays with SG_FLAGS=(${INPUT_SG_FLAGS}) and REVIEWDOG_FLAGS=(${INPUT_REVIEWDOG_FLAGS}). Each assignment has a '# shellcheck disable=SC2086' line above it. The arrays are passed quoted as "${SG_FLAGS[@]}" and "${REVIEWDOG_FLAGS[@]}". This keeps upstream's whitespace split and glob behaviour. It does not use xargs, because reviewdog reads its input on stdin.
 
