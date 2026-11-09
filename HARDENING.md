@@ -16,18 +16,12 @@ Action **reviewdog--action-ast-grep/v1.64.11** was hardened automatically. 1 fin
 
 ### script-injection (severity: high)
 
-Rule (b) violation: In script.sh, the env vars `${INPUT_SG_FLAGS}` and `${INPUT_REVIEWDOG_FLAGS}` — which hold values sourced from `inputs.sg_flags` and `inputs.reviewdog_flags` (set via the `env:` block in action.yml) — are expanded **unquoted** inside shell commands. An attacker-controlled caller can supply values containing shell metacharacters (`;`, `|`, `&`, `$(...)`, etc.) that will be parsed by the shell, enabling command injection.
-
-Offending lines:
-- `${INPUT_SG_FLAGS}` used unquoted in the `ast-grep scan` pipeline (the `# shellcheck disable=SC2086` comment acknowledges but does not fix this)
-- `${INPUT_REVIEWDOG_FLAGS}` used unquoted in the `reviewdog` invocation
-
-Fix: Use `"${INPUT_SG_FLAGS}"` and `"${INPUT_REVIEWDOG_FLAGS}"`, or use an array to pass flags safely.
+Rule (b) violation in script.sh, which the composite action's run step calls. Two variables are expanded unquoted as command arguments: `${INPUT_SG_FLAGS} |` (passed to `ast-grep scan`) and `${INPUT_REVIEWDOG_FLAGS} |` (passed to `reviewdog`). They come from inputs.sg_flags and inputs.reviewdog_flags, so the calling workflow controls them. Neither uses the exempt form `NAME=($VAR)` with `# shellcheck disable=SC2086`. The existing shellcheck comment sits above a pipeline, not an array assignment. Suggested fix: split each value into an array, e.g. `# shellcheck disable=SC2086` then `SG_FLAGS=(${INPUT_SG_FLAGS})`, and pass it as `"${SG_FLAGS[@]}"`. Do the same for the reviewdog flags.
 
 Locations:
 
-- `script.sh:46`
-- `script.sh:55`
+- `script.sh:57`
+- `script.sh:66`
 
 ## Iteration Notes
 
@@ -37,5 +31,5 @@ Locations:
 
 **Notes:**
 
-Fixed unquoted expansion of INPUT_SG_FLAGS and INPUT_REVIEWDOG_FLAGS in script.sh. Both are argument-list inputs (flags), so replaced unquoted ${VAR} expansions with bash arrays built using the xargs/NUL-delimited read loop pattern (guarded by [ -n "$VAR" ] checks). Arrays are expanded as "${array[@]}" in the ast-grep and reviewdog commands respectively. Removed the now-unnecessary # shellcheck disable=SC2086 comment.
+In script.sh, the `sg_flags` and `reviewdog_flags` values are now split into bash arrays with `SG_FLAGS=(${INPUT_SG_FLAGS})` and `REVIEWDOG_FLAGS=(${INPUT_REVIEWDOG_FLAGS})`, each marked with `# shellcheck disable=SC2086`. The commands then receive them as "${SG_FLAGS[@]}" and "${REVIEWDOG_FLAGS[@]}". This splits on whitespace and expands globs exactly as upstream's unquoted expansion did, and an empty input still adds no argument. The script's shebang is #!/bin/bash and the composite step runs it with `shell: bash`, so the array syntax will run. I didn't use xargs, since reviewdog reads its input from the pipe on stdin. Nothing else changed. I haven't run the action or a new analysis pass after the edit.
 
