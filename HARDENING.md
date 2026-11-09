@@ -16,12 +16,12 @@ Action **reviewdog--action-ast-grep/v1.64.5** was hardened automatically. 1 find
 
 ### script-injection (severity: high)
 
-Sub-rule (b): Unquoted shell variable expansion of untrusted input data in script.sh. The variables `${INPUT_SG_FLAGS}` (line 51) and `${INPUT_REVIEWDOG_FLAGS}` (line 60) are expanded without double-quotes in shell commands. These env vars hold values sourced from `inputs.sg_flags` and `inputs.reviewdog_flags` (set via the `env:` block in action.yml). An attacker-controlled input containing shell metacharacters (`;`, `|`, `&`, `$(...)`, etc.) can break out of the intended command and execute arbitrary shell commands. The `# shellcheck disable=SC2086` comment suppresses the linter warning but does not fix the underlying injection risk.
+Rule (b): in script.sh, which the composite step runs, the workflow-controlled env vars INPUT_SG_FLAGS (from inputs.sg_flags) and INPUT_REVIEWDOG_FLAGS (from inputs.reviewdog_flags) are expanded unquoted straight into command arguments: line 57 `${INPUT_SG_FLAGS} |` (ast-grep scan) and line 67 `${INPUT_REVIEWDOG_FLAGS} |` (reviewdog). The '# shellcheck disable=SC2086' comment is there, but these are not array assignments (NAME=($VAR)), so the exemption does not apply. Word splitting and glob expansion of caller-supplied values can inject extra arguments. The fix is to assign each value to an array on its own line, e.g. `# shellcheck disable=SC2086` then `SG_FLAGS=(${INPUT_SG_FLAGS})`, and pass "${SG_FLAGS[@]}".
 
 Locations:
 
-- `script.sh:51`
-- `script.sh:60`
+- `script.sh:57`
+- `script.sh:67`
 
 ## Iteration Notes
 
@@ -31,5 +31,13 @@ Locations:
 
 **Notes:**
 
-Fixed unquoted expansion of INPUT_SG_FLAGS (line 51) and INPUT_REVIEWDOG_FLAGS (line 60) in script.sh. Both are list-style inputs (additional flags), so they are now tokenized using xargs into bash arrays (sg_flags and reviewdog_flags respectively) with proper NUL-delimited splitting that handles quoted arguments correctly. The arrays are then expanded safely as "${sg_flags[@]}" and "${reviewdog_flags[@]}". Each tokenization is guarded with an if [ -n "$VAR" ] check to prevent xargs from emitting an empty token on empty input. The # shellcheck disable=SC2086 comment was also removed.
+I fixed the script-injection finding in script.sh. Nothing has been run or tested.
+
+The two flag inputs are no longer pasted straight into the commands. Each one is now put into a bash array on its own line, with the shellcheck SC2086 exception comment above it:
+- `SG_FLAGS=(${INPUT_SG_FLAGS})`
+- `REVIEWDOG_FLAGS=(${INPUT_REVIEWDOG_FLAGS})`
+
+The commands then get `"${SG_FLAGS[@]}"` and `"${REVIEWDOG_FLAGS[@]}"`. The unquoted array assignment breaks the value into arguments on whitespace and expands file patterns exactly as upstream did, and an empty input still adds no argument. So `sg_flags: --filter rule path` still reaches ast-grep as separate arguments.
+
+The arrays work because the script starts with `#!/bin/bash` and the step uses `shell: bash`. The plain `"${ARR[@]}"` form is safe on macOS's older bash 3.2 because the script doesn't use `set -u`. ast-grep and reviewdog still pass data to each other through the pipe as before. No other files were changed.
 
