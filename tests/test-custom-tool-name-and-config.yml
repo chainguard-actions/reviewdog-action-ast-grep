@@ -1,0 +1,35 @@
+name: Test custom tool name, config path and ast-grep version
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          workdir: tests/fixtures/sg
+          reporter: local
+          filter_mode: nofilter
+          level: warning
+          tool_name: my-sg
+          sg_config: custom-sgconfig.yml
+          sg_version: 0.51.1
+          output_dir: out-custom
+      - name: Assert custom-named output file contains finding
+        run: |
+          F="$GITHUB_WORKSPACE/tests/fixtures/sg/out-custom/reviewdog-my-sg"
+          if [ ! -f "$F" ]; then
+            echo "FAIL: output file $F not found"
+            ls -la "$GITHUB_WORKSPACE/tests/fixtures/sg/out-custom" || true
+            exit 1
+          fi
+          echo "--- output ---"
+          cat "$F"
+          echo "--------------"
+          if ! grep -q "Avoid console.log in production code" "$F"; then
+            echo "FAIL: expected finding message in output"
+            exit 1
+          fi
+          echo "PASS"
