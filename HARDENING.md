@@ -10,38 +10,26 @@
 
 **Harden Agent Version:** `2`
 
-Action **reviewdog--action-ast-grep/v1.58.1** was hardened automatically. 2 finding(s) were identified and resolved across 1 iteration(s).
+Action **reviewdog--action-ast-grep/v1.58.1** was hardened automatically. 1 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
 ### script-injection (severity: high)
 
-Rule (b) violation: In script.sh (invoked by action.yml's run: step), the env vars ${INPUT_SG_FLAGS} and ${INPUT_REVIEWDOG_FLAGS} — sourced from inputs.sg_flags and inputs.reviewdog_flags respectively — are expanded unquoted inside shell commands. This allows a caller to inject shell metacharacters (`;`, `|`, `&`, `$(...)`, etc.) via these inputs. The `# shellcheck disable=SC2086` comment confirms the intentional word-splitting, but it does not prevent command injection. Offending lines: `  ${INPUT_SG_FLAGS} |` (line 57) and `    ${INPUT_REVIEWDOG_FLAGS} |` (line 67).
+Rule (b) violation in script.sh, which the composite step runs ($GITHUB_ACTION_PATH/script.sh). Two env vars that come straight from action inputs are expanded unquoted as command arguments: `${INPUT_SG_FLAGS} |` on the ast-grep scan command (INPUT_SG_FLAGS = inputs.sg_flags) and `${INPUT_REVIEWDOG_FLAGS} |` on the reviewdog command (INPUT_REVIEWDOG_FLAGS = inputs.reviewdog_flags). The '# shellcheck disable=SC2086' directive is there, but these are not NAME=($VAR) array assignments, so the hardened-list exception does not cover them. Fix: split each value into an array on its own line under the directive, e.g. `# shellcheck disable=SC2206` / `SG_FLAGS=(${INPUT_SG_FLAGS})`, and do the same for REVIEWDOG_FLAGS. Then pass them as "${SG_FLAGS[@]}" and "${REVIEWDOG_FLAGS[@]}".
 
 Locations:
 
 - `script.sh:57`
-- `script.sh:67`
-
-### missing-permissions (severity: medium)
-
-None of the workflow files define a top-level `permissions:` key, and no job within any of these files defines a job-level `permissions:` key. Without explicit permissions, workflows run with the default (potentially broad) token permissions. All five workflow files are affected: depup.yml, labels.yml, release.yml, reviewdog.yml, and test.yml.
-
-Locations:
-
-- `.github/workflows/depup.yml:1`
-- `.github/workflows/labels.yml:1`
-- `.github/workflows/release.yml:1`
-- `.github/workflows/reviewdog.yml:1`
-- `.github/workflows/test.yml:1`
+- `script.sh:66`
 
 ## Iteration Notes
 
 ### Iteration 1
 
-**Fixes applied:** script-injection, missing-permissions
+**Fixes applied:** script-injection
 
 **Notes:**
 
-Fixed script injection in script.sh by replacing unquoted ${INPUT_SG_FLAGS} and ${INPUT_REVIEWDOG_FLAGS} expansions with bash arrays (read -ra into arrays, expanded as "${array[@]}"). Added minimal permissions blocks to all 5 workflow files: depup.yml (contents:write, pull-requests:write), labels.yml (issues:write), release.yml (contents:write, pull-requests:write), reviewdog.yml (contents:read, checks:write, pull-requests:write), test.yml (contents:read, checks:write, pull-requests:write).
+script.sh: INPUT_SG_FLAGS and INPUT_REVIEWDOG_FLAGS are now split into arrays with SG_FLAGS=(${INPUT_SG_FLAGS}) and REVIEWDOG_FLAGS=(${INPUT_REVIEWDOG_FLAGS}), each under a shellcheck disable=SC2086,SC2206 directive. The commands now pass "${SG_FLAGS[@]}" and "${REVIEWDOG_FLAGS[@]}". Arguments split and glob the same way as upstream's unquoted expansion. Each command still reads its data from the pipe on stdin.
 

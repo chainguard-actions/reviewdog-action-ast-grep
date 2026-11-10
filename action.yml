@@ -1,5 +1,5 @@
 name: 'Run ast-grep with reviewdog'
-description: "\U0001F436 Run ast-grep with reviewdog on pull requests to improve code review experience."
+description: '🐶 Run ast-grep with reviewdog on pull requests to improve code review experience.'
 author: 'rinx'
 inputs:
   github_token:
@@ -52,6 +52,7 @@ inputs:
   sg_flags:
     description: 'Additional ast-grep flags.'
     default: ''
+
 runs:
   using: 'composite'
   steps:
@@ -72,7 +73,7 @@ runs:
         curl "${args[@]}" \
           -d "{\"repository\":\"${GITHUB_REPOSITORY}\",\"action\":\"${GITHUB_ACTION_REPOSITORY}\"}" \
           "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
-    - uses: reviewdog/action-setup@d8a7baabd7f3e8544ee4dbde3ee41d0011c3a93f # v1.5.0
+    - uses: chainguard-actions/reviewdog-action-setup@1ce633154760f8ceb9de1e4c17deb0188ef82866 # v1.5.0
       with:
         reviewdog_version: v0.21.0
     - run: $GITHUB_ACTION_PATH/script.sh
@@ -95,9 +96,10 @@ runs:
         INPUT_SG_FLAGS: ${{ inputs.sg_flags }}
         DEFAULT_SG_VERSION: 0.44.1
     - if: inputs.reporter == 'sarif'
-      uses: github/codeql-action/upload-sarif@99df26d4f13ea111d4ec1a7dddef6063f76b97e9 # v4.37.0
+      uses: chainguard-actions/github-codeql-action/upload-sarif@750ddb5803e0ab1ecc7cf359893da167d49bbe3b # v4.37.0
       with:
         sarif_file: ${{ inputs.output_dir }}
+
 # Ref: https://haya14busa.github.io/github-action-brandings/
 branding:
   icon: 'check'
