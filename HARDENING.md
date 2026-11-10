@@ -16,16 +16,12 @@ Action **reviewdog--action-ast-grep/v1.62.2** was hardened automatically. 1 find
 
 ### script-injection (severity: high)
 
-Sub-rule (b) violation: In script.sh, the env vars `${INPUT_SG_FLAGS}` (line 48) and `${INPUT_REVIEWDOG_FLAGS}` (line 56) are expanded **unquoted** inside shell commands. Both variables hold workflow-controllable data sourced from `inputs.sg_flags` and `inputs.reviewdog_flags` respectively (set via the `env:` block in action.yml). An attacker-controlled caller can supply values containing shell metacharacters (`;`, `|`, `&`, `$(...)`, etc.) that will be parsed by the shell, enabling command injection. The `# shellcheck disable=SC2086` comment on line 47 confirms the author is aware of the unquoted expansion. The safe alternative for optional flag inputs is the guarded form: `${INPUT_SG_FLAGS:+"$INPUT_SG_FLAGS"}` and `${INPUT_REVIEWDOG_FLAGS:+"$INPUT_REVIEWDOG_FLAGS"}`.
-
-Offending lines:
-- Line 48: `  ${INPUT_SG_FLAGS} |`
-- Line 56: `    ${INPUT_REVIEWDOG_FLAGS} |`
+Rule (b): unquoted shell expansion of workflow-controlled data. In script.sh, which the composite action's run step calls, the inputs sg_flags and reviewdog_flags are passed in through env as INPUT_SG_FLAGS and INPUT_REVIEWDOG_FLAGS. They are expanded unquoted as command arguments: `  ${INPUT_SG_FLAGS} |` (ast-grep scan) and `    ${INPUT_REVIEWDOG_FLAGS} |` (reviewdog). The '# shellcheck disable=SC2086' exemption only covers NAME=($VAR) array assignments. These are direct unquoted expansions in command arguments, so they don't qualify.
 
 Locations:
 
-- `script.sh:48`
-- `script.sh:56`
+- `script.sh:57`
+- `script.sh:68`
 
 ## Iteration Notes
 
@@ -35,5 +31,5 @@ Locations:
 
 **Notes:**
 
-Fixed unquoted expansions of ${INPUT_SG_FLAGS} and ${INPUT_REVIEWDOG_FLAGS} in script.sh. Both are 'args/options'-style inputs that can contain multiple flags, so they were tokenized into bash arrays using the xargs quote-aware pattern with guards (if [ -n "$VAR" ]). The arrays are built before the pipeline so that reviewdog (which reads from stdin) is not affected by stdin-stealing. Arrays are expanded with "${sg_flags[@]}" and "${reviewdog_flags[@]}" to preserve argument boundaries. The # shellcheck disable=SC2086 comment was removed as it's no longer needed.
+script.sh: INPUT_SG_FLAGS and INPUT_REVIEWDOG_FLAGS are now tokenized with unquoted array assignments (sg_flags=(${INPUT_SG_FLAGS}), reviewdog_flags=(...)) under '# shellcheck disable=SC2086'. The arrays are expanded as ${arr[@]+"${arr[@]}"}, which handles empty arrays safely. The whitespace split and glob behaviour are the same as upstream. I did not use xargs because reviewdog reads its input from stdin through the pipe.
 
