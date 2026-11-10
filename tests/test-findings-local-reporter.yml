@@ -1,0 +1,35 @@
+name: Test ast-grep findings reported with local reporter
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          workdir: tests/fixtures/sg-findings
+          reporter: local
+          filter_mode: nofilter
+          output_dir: /tmp/rd-findings
+      - name: Assert output file contains the finding
+        run: |
+          f=/tmp/rd-findings/reviewdog-ast-grep
+          if [ ! -f "$f" ]; then
+            echo "FAIL: output file $f not found"
+            ls -la /tmp/rd-findings || true
+            exit 1
+          fi
+          echo "--- output ---"
+          cat "$f"
+          echo "--------------"
+          if ! grep -q "Avoid console.log in production code" "$f"; then
+            echo "FAIL: expected rule message in reviewdog output"
+            exit 1
+          fi
+          if ! grep -q "app.js" "$f"; then
+            echo "FAIL: expected file path app.js in reviewdog output"
+            exit 1
+          fi
+          echo "PASS"

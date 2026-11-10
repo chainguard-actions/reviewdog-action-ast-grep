@@ -1,0 +1,38 @@
+name: Test ast-grep on clean code produces no findings
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          workdir: tests/fixtures/sg-clean
+          reporter: local
+          filter_mode: nofilter
+          fail_level: any
+          output_dir: /tmp/rd-clean
+      - name: Assert step succeeded and output is empty
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: expected success"
+            exit 1
+          fi
+          f=/tmp/rd-clean/reviewdog-ast-grep
+          if [ ! -f "$f" ]; then
+            echo "FAIL: output file $f not found"
+            exit 1
+          fi
+          echo "--- output ---"
+          cat "$f"
+          echo "--------------"
+          if grep -q "Avoid console.log" "$f"; then
+            echo "FAIL: did not expect findings on clean code"
+            exit 1
+          fi
+          echo "PASS"
