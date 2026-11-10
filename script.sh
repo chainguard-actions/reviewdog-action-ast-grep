@@ -50,21 +50,12 @@ echo '::endgroup::'
 
 echo '::group:: Running ast-grep with reviewdog 🐶 ...'
 
-sg_flags=()
-if [ -n "${INPUT_SG_FLAGS}" ]; then
-  read -r -d '' -a sg_flags <<< "${INPUT_SG_FLAGS}" || true
-fi
-
-reviewdog_flags=()
-if [ -n "${INPUT_REVIEWDOG_FLAGS}" ]; then
-  read -r -d '' -a reviewdog_flags <<< "${INPUT_REVIEWDOG_FLAGS}" || true
-fi
-
+# shellcheck disable=SC2086
 ast-grep scan \
   --config="${INPUT_SG_CONFIG}" \
   --custom-languages "${INPUT_CUSTOM_LANGUAGES}" \
   --json=compact \
-  "${sg_flags[@]}" |
+  ${INPUT_SG_FLAGS} |
   jq -f "${GITHUB_ACTION_PATH}/to-rdjsonl.jq" -c |
   reviewdog \
     -f=rdjsonl \
@@ -74,7 +65,7 @@ ast-grep scan \
     -fail-level="${INPUT_FAIL_LEVEL}" \
     -fail-on-error="${INPUT_FAIL_ON_ERROR}" \
     -level="${INPUT_LEVEL}" \
-    "${reviewdog_flags[@]}" |
+    ${INPUT_REVIEWDOG_FLAGS} |
   tee "${INPUT_OUTPUT_DIR}/${OUTPUT_FILE_NAME}"
 
 exit_code=${PIPESTATUS[1]}
