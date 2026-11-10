@@ -1,0 +1,37 @@
+name: Test custom tool_name, explicit sg_version and sg_config
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          workdir: tests/fixtures/sg
+          tool_name: my-sg
+          sg_version: 0.45.2
+          sg_config: ./sgconfig.yml
+          level: warning
+          reporter: local
+          filter_mode: nofilter
+          output_dir: /tmp/rd-custom
+      - name: Assert output file named after tool_name
+        run: |
+          ls -la /tmp/rd-custom || true
+          f=/tmp/rd-custom/reviewdog-my-sg
+          if [ ! -f "$f" ]; then
+            echo "FAIL: expected result file $f"
+            exit 1
+          fi
+          if [ -f /tmp/rd-custom/reviewdog-ast-grep ]; then
+            echo "FAIL: default-named file should not exist"
+            exit 1
+          fi
+          cat "$f"
+          if ! grep -q "Avoid console.log in production code" "$f"; then
+            echo "FAIL: expected finding message not in output"
+            exit 1
+          fi
+          echo "PASS"
