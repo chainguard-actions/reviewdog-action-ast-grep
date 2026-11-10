@@ -1,0 +1,36 @@
+name: Test custom tool_name and sg_config
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          workdir: tests/fixtures/sg-project
+          reporter: local
+          filter_mode: nofilter
+          level: warning
+          tool_name: my-sg-check
+          sg_config: alt-sgconfig.yml
+          output_dir: ${{ github.workspace }}/sg-results-custom
+      - name: Assert output file is named after tool_name and has the finding
+        run: |
+          OUT="$GITHUB_WORKSPACE/sg-results-custom/reviewdog-my-sg-check"
+          ls -la "$GITHUB_WORKSPACE/sg-results-custom" || true
+          if [ ! -f "$OUT" ]; then
+            echo "FAIL: expected output file $OUT"
+            exit 1
+          fi
+          if [ -f "$GITHUB_WORKSPACE/sg-results-custom/reviewdog-ast-grep" ]; then
+            echo "FAIL: default-named output file should not exist"
+            exit 1
+          fi
+          cat "$OUT"
+          if ! grep -q "app.js" "$OUT"; then
+            echo "FAIL: expected finding in app.js using alternate config"
+            exit 1
+          fi
+          echo "PASS"

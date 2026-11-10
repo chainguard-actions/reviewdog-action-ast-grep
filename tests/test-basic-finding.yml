@@ -1,0 +1,36 @@
+name: Test basic finding with local reporter
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          workdir: tests/fixtures/sg-project
+          reporter: local
+          filter_mode: nofilter
+          level: warning
+          output_dir: ${{ github.workspace }}/sg-results-basic
+      - name: Assert reviewdog output contains the finding
+        run: |
+          OUT="$GITHUB_WORKSPACE/sg-results-basic/reviewdog-ast-grep"
+          if [ ! -f "$OUT" ]; then
+            echo "FAIL: output file $OUT not found"
+            ls -la "$GITHUB_WORKSPACE/sg-results-basic" || true
+            exit 1
+          fi
+          echo "---- output ----"
+          cat "$OUT"
+          echo "----------------"
+          if ! grep -q "app.js" "$OUT"; then
+            echo "FAIL: expected finding in app.js"
+            exit 1
+          fi
+          if ! grep -q "Avoid console.log" "$OUT"; then
+            echo "FAIL: expected rule message in output"
+            exit 1
+          fi
+          echo "PASS"

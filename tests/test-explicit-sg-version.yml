@@ -1,0 +1,30 @@
+name: Test explicit sg_version
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          workdir: tests/fixtures/sg-project
+          reporter: local
+          filter_mode: nofilter
+          level: warning
+          sg_version: 0.45.3
+          output_dir: ${{ github.workspace }}/sg-results-version
+      - name: Assert finding reported with explicit version
+        run: |
+          OUT="$GITHUB_WORKSPACE/sg-results-version/reviewdog-ast-grep"
+          if [ ! -f "$OUT" ]; then
+            echo "FAIL: output file $OUT not found"
+            exit 1
+          fi
+          cat "$OUT"
+          if ! grep -q "app.js" "$OUT"; then
+            echo "FAIL: expected finding in app.js"
+            exit 1
+          fi
+          echo "PASS"

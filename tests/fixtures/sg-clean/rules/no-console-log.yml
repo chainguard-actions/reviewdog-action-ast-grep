@@ -1,0 +1,6 @@
+id: no-console-log
+language: JavaScript
+severity: warning
+message: Avoid console.log in production code
+rule:
+  pattern: console.log($$$ARGS)
