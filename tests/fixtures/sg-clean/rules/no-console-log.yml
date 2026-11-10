@@ -1,6 +1,6 @@
 id: no-console-log
 language: JavaScript
-severity: error
-message: Avoid console.log in production code
+severity: warning
+message: Unexpected console.log call found
 rule:
   pattern: console.log($$$ARGS)

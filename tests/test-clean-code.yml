@@ -12,19 +12,26 @@ jobs:
           workdir: tests/fixtures/sg-clean
           reporter: local
           filter_mode: nofilter
-          fail_level: error
-          output_dir: out-clean
-      - name: Assert empty report
+          level: warning
+          fail_level: any
+          output_dir: /tmp/rd-clean
+      - name: Assert no findings
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
         run: |
-          F="$GITHUB_WORKSPACE/tests/fixtures/sg-clean/out-clean/reviewdog-ast-grep"
-          if [ ! -f "$F" ]; then
-            echo "FAIL: output file $F not found"
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: expected success"
+            exit 1
+          fi
+          f=/tmp/rd-clean/reviewdog-ast-grep
+          if [ ! -f "$f" ]; then
+            echo "FAIL: output file $f not found"
             exit 1
           fi
           echo "--- output ---"
-          cat "$F"
-          echo "--------------"
-          if grep -q "console.log" "$F"; then
+          cat "$f"
+          if grep -q "console.log" "$f"; then
             echo "FAIL: expected no findings"
             exit 1
           fi

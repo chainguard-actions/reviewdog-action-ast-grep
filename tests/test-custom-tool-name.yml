@@ -1,0 +1,37 @@
+name: Test custom tool name and explicit sg_version
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          workdir: tests/fixtures/sg-violations
+          tool_name: my-sg-linter
+          sg_version: 0.51.1
+          sg_config: sgconfig.yml
+          reporter: local
+          filter_mode: nofilter
+          level: warning
+          output_dir: /tmp/rd-custom
+      - name: Assert output file uses custom tool name
+        run: |
+          ls -la /tmp/rd-custom || true
+          f=/tmp/rd-custom/reviewdog-my-sg-linter
+          if [ ! -f "$f" ]; then
+            echo "FAIL: output file $f not found"
+            exit 1
+          fi
+          if [ -f /tmp/rd-custom/reviewdog-ast-grep ]; then
+            echo "FAIL: default-named output file should not exist"
+            exit 1
+          fi
+          cat "$f"
+          if ! grep -q "Unexpected console.log call found" "$f"; then
+            echo "FAIL: expected rule message in output"
+            exit 1
+          fi
+          echo "PASS"

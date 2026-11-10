@@ -1,0 +1,35 @@
+name: Test basic violation detection
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          workdir: tests/fixtures/sg-violations
+          reporter: local
+          filter_mode: nofilter
+          level: warning
+          output_dir: /tmp/rd-basic
+      - name: Assert violation reported
+        run: |
+          f=/tmp/rd-basic/reviewdog-ast-grep
+          if [ ! -f "$f" ]; then
+            echo "FAIL: output file $f not found"
+            ls -la /tmp/rd-basic || true
+            exit 1
+          fi
+          echo "--- output ---"
+          cat "$f"
+          if ! grep -q "Unexpected console.log call found" "$f"; then
+            echo "FAIL: expected rule message in output"
+            exit 1
+          fi
+          if ! grep -q "app.js" "$f"; then
+            echo "FAIL: expected app.js in output"
+            exit 1
+          fi
+          echo "PASS"
