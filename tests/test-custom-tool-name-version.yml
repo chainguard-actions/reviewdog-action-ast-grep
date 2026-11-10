@@ -1,0 +1,38 @@
+name: Test custom tool_name and explicit sg_version
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          workdir: tests/fixtures/sg-violation
+          reporter: local
+          filter_mode: nofilter
+          tool_name: my-sg
+          sg_version: 0.45.1
+          sg_config: sgconfig.yml
+          output_dir: ${{ runner.temp }}/rd-custom
+      - name: Assert output file uses custom tool name
+        env:
+          OUT_DIR: ${{ runner.temp }}/rd-custom
+        run: |
+          ls -la "$OUT_DIR" || true
+          FILE="$OUT_DIR/reviewdog-my-sg"
+          if [ ! -f "$FILE" ]; then
+            echo "FAIL: expected output file $FILE"
+            exit 1
+          fi
+          if [ -f "$OUT_DIR/reviewdog-ast-grep" ]; then
+            echo "FAIL: default-named output file should not exist"
+            exit 1
+          fi
+          cat "$FILE"
+          if ! grep -q "bad.js" "$FILE"; then
+            echo "FAIL: expected bad.js to be reported"
+            exit 1
+          fi
+          echo "PASS"

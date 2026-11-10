@@ -1,0 +1,37 @@
+name: Test basic violation detection
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          workdir: tests/fixtures/sg-violation
+          reporter: local
+          filter_mode: nofilter
+          output_dir: ${{ runner.temp }}/rd-basic
+      - name: Assert violation reported
+        env:
+          OUT_DIR: ${{ runner.temp }}/rd-basic
+        run: |
+          FILE="$OUT_DIR/reviewdog-ast-grep"
+          if [ ! -f "$FILE" ]; then
+            echo "FAIL: output file $FILE not found"
+            ls -la "$OUT_DIR" || true
+            exit 1
+          fi
+          echo "--- output ---"
+          cat "$FILE"
+          echo "--------------"
+          if ! grep -q "bad.js" "$FILE"; then
+            echo "FAIL: expected bad.js to be reported"
+            exit 1
+          fi
+          if ! grep -q "Avoid console.log" "$FILE"; then
+            echo "FAIL: expected rule message in output"
+            exit 1
+          fi
+          echo "PASS"

@@ -1,0 +1,43 @@
+name: Test clean code reports nothing
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          workdir: tests/fixtures/sg-clean
+          reporter: local
+          filter_mode: nofilter
+          fail_level: any
+          output_dir: ${{ runner.temp }}/rd-clean
+      - name: Assert nothing reported
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+          OUT_DIR: ${{ runner.temp }}/rd-clean
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: expected success"
+            exit 1
+          fi
+          FILE="$OUT_DIR/reviewdog-ast-grep"
+          if [ ! -f "$FILE" ]; then
+            echo "FAIL: output file $FILE not found"
+            exit 1
+          fi
+          echo "--- output ---"
+          cat "$FILE"
+          echo "--------------"
+          if grep -q "console.log" "$FILE"; then
+            echo "FAIL: did not expect any findings"
+            exit 1
+          fi
+          if [ -s "$FILE" ]; then
+            echo "FAIL: expected empty output"
+            exit 1
+          fi
+          echo "PASS"
