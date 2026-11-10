@@ -16,18 +16,12 @@ Action **reviewdog--action-ast-grep/v1.56.1** was hardened automatically. 1 find
 
 ### script-injection (severity: high)
 
-Rule (b) violation: Two env vars holding user-controlled inputs are expanded unquoted inside `script.sh`, allowing shell metacharacter injection.
-
-1. `${INPUT_SG_FLAGS}` (from `inputs.sg_flags`) is passed unquoted as a positional argument to `ast-grep scan`: `  ${INPUT_SG_FLAGS} |` — an attacker can inject shell metacharacters (`;`, `|`, `$(...)`, etc.).
-
-2. `${INPUT_REVIEWDOG_FLAGS}` (from `inputs.reviewdog_flags`) is passed unquoted to `reviewdog`: `    ${INPUT_REVIEWDOG_FLAGS} |` — same risk.
-
-Both variables are set via the `env:` block in `action.yml` from `inputs.*` values and must be double-quoted: `"${INPUT_SG_FLAGS}"` and `"${INPUT_REVIEWDOG_FLAGS}"` (or use the guarded form `${VAR:+"$VAR"}` for optional flags).
+Rule (b): in script.sh (run by the composite step in action.yml), the input-sourced env vars INPUT_SG_FLAGS and INPUT_REVIEWDOG_FLAGS are expanded unquoted straight into command arguments: `${INPUT_SG_FLAGS} |` (line 59) and `${INPUT_REVIEWDOG_FLAGS} |` (line 68). The `# shellcheck disable=SC2086` comment sits on a command, not on a NAME=($VAR) array assignment, so the array exemption does not cover it. The unquoted values are word-split and glob-expanded into arbitrary arguments for ast-grep and reviewdog. Fix: split each value into an array on its own line with the shellcheck directive (e.g. `# shellcheck disable=SC2206` then `SG_FLAGS=(${INPUT_SG_FLAGS})`) and pass it as "${SG_FLAGS[@]}". Do the same for the reviewdog flags.
 
 Locations:
 
-- `script.sh:44`
-- `script.sh:52`
+- `script.sh:59`
+- `script.sh:68`
 
 ## Iteration Notes
 
@@ -37,9 +31,5 @@ Locations:
 
 **Notes:**
 
-Fixed two unquoted variable expansions in script.sh:
-1. `${INPUT_SG_FLAGS}` (line 44): Replaced with a bash array `sg_flags` populated via xargs tokenization, expanded as `"${sg_flags[@]}"`.
-2. `${INPUT_REVIEWDOG_FLAGS}` (line 52): Replaced with a bash array `reviewdog_flags` populated via xargs tokenization, expanded as `"${reviewdog_flags[@]}"`.
-
-Both use the guarded `if [ -n "${VAR}" ]` pattern to avoid empty-token issues. The reviewdog flags are pre-tokenized into an array (not piped through xargs at call time) because reviewdog reads its input from stdin in the pipeline. The `# shellcheck disable=SC2086` comment was removed as it is no longer needed.
+script.sh: INPUT_SG_FLAGS and INPUT_REVIEWDOG_FLAGS are now each split into an array (SG_FLAGS=(${INPUT_SG_FLAGS}), REVIEWDOG_FLAGS=(${INPUT_REVIEWDOG_FLAGS})) on its own line with '# shellcheck disable=SC2206'. They are passed as "${SG_FLAGS[@]}" and "${REVIEWDOG_FLAGS[@]}". The split and glob are the same as upstream's unquoted expansion, so multi-word flag lists still reach the tools as separate arguments.
 
