@@ -1,0 +1,36 @@
+name: Test custom tool_name and explicit sg_config
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          workdir: tests/fixtures/sg-project
+          sg_config: ./sgconfig.yml
+          tool_name: my-sg-linter
+          level: warning
+          reporter: local
+          filter_mode: nofilter
+          output_dir: /tmp/rd-custom
+      - name: Assert output file is named after tool_name
+        run: |
+          F=/tmp/rd-custom/reviewdog-my-sg-linter
+          ls -la /tmp/rd-custom || true
+          if [ ! -f "$F" ]; then
+            echo "FAIL: expected output file $F"
+            exit 1
+          fi
+          if [ -f /tmp/rd-custom/reviewdog-ast-grep ]; then
+            echo "FAIL: default-named output file should not exist"
+            exit 1
+          fi
+          cat "$F"
+          if ! grep -q "Avoid console.log in production code" "$F"; then
+            echo "FAIL: expected rule message in output"
+            exit 1
+          fi
+          echo "PASS"
