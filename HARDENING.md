@@ -16,12 +16,12 @@ Action **reviewdog--action-ast-grep/v1** was hardened automatically. 1 finding(s
 
 ### unpinned-uses (severity: high)
 
-action.yml uses actions by version tag instead of a full 40-character commit SHA: 'uses: reviewdog/action-setup@v1.5.0' (line 67) and 'uses: github/codeql-action/upload-sarif@v4.39.1' (line 92).
+The composite action steps in action.yml pin actions to version tags instead of full 40-character commit SHAs: 'uses: reviewdog/action-setup@v1.5.0' and 'uses: github/codeql-action/upload-sarif@v4.39.1'.
 
 Locations:
 
 - `action.yml:67`
-- `action.yml:92`
+- `action.yml:91`
 
 ## Iteration Notes
 
@@ -31,5 +31,5 @@ Locations:
 
 **Notes:**
 
-Pinned reviewdog/action-setup@v1.5.0 to d8a7baabd7f3e8544ee4dbde3ee41d0011c3a93f and github/codeql-action/upload-sarif@v4.39.1 to 9b3254085494b55a0f7c4c2b3d2d52cc712ce370, keeping tag comments.
+Pinned reviewdog/action-setup to d8a7baabd7f3e8544ee4dbde3ee41d0011c3a93f (v1.5.0) and github/codeql-action/upload-sarif to 9b3254085494b55a0f7c4c2b3d2d52cc712ce370 (v4.39.1) in action.yml. No other changes.
 

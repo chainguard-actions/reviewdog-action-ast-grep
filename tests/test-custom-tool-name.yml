@@ -1,4 +1,4 @@
-name: Test custom tool name and explicit sg_version
+name: Test custom tool name, explicit version and fail_level
 on:
   workflow_dispatch:
 jobs:
@@ -9,18 +9,26 @@ jobs:
       - id: action
         uses: .
         with:
-          workdir: tests/fixtures/sg-violations
-          tool_name: my-sg-linter
-          sg_version: 0.51.1
-          sg_config: sgconfig.yml
+          workdir: tests/fixtures/sg
           reporter: local
           filter_mode: nofilter
+          tool_name: my-sg
           level: warning
+          fail_level: error
+          sg_version: 0.51.1
+          sg_config: sgconfig.yml
           output_dir: /tmp/rd-custom
-      - name: Assert output file uses custom tool name
+      - name: Assert output written under custom tool name
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
         run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: expected success (script exit code follows jq, not reviewdog)"
+            exit 1
+          fi
           ls -la /tmp/rd-custom || true
-          f=/tmp/rd-custom/reviewdog-my-sg-linter
+          f=/tmp/rd-custom/reviewdog-my-sg
           if [ ! -f "$f" ]; then
             echo "FAIL: output file $f not found"
             exit 1
@@ -30,8 +38,8 @@ jobs:
             exit 1
           fi
           cat "$f"
-          if ! grep -q "Unexpected console.log call found" "$f"; then
-            echo "FAIL: expected rule message in output"
+          if ! grep -q "sample.js" "$f"; then
+            echo "FAIL: expected sample.js finding"
             exit 1
           fi
           echo "PASS"

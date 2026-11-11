@@ -1,6 +1,0 @@
-id: no-console-log
-language: JavaScript
-severity: warning
-message: Unexpected console.log call found
-rule:
-  pattern: console.log($$$ARGS)

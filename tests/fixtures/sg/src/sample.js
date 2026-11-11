@@ -3,4 +3,4 @@ function greet(name) {
   return name;
 }
 
-module.exports = greet;
+module.exports = { greet };

@@ -1,4 +1,4 @@
-name: Test clean code produces no findings
+name: Test no findings on clean code
 on:
   workflow_dispatch:
 jobs:
@@ -9,13 +9,12 @@ jobs:
       - id: action
         uses: .
         with:
-          workdir: tests/fixtures/sg-clean
+          workdir: tests/fixtures/sg
           reporter: local
           filter_mode: nofilter
-          level: warning
-          fail_level: any
+          sg_flags: clean
           output_dir: /tmp/rd-clean
-      - name: Assert no findings
+      - name: Assert output file exists and is empty
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
@@ -31,8 +30,13 @@ jobs:
           fi
           echo "--- output ---"
           cat "$f"
+          echo "--------------"
           if grep -q "console.log" "$f"; then
             echo "FAIL: expected no findings"
+            exit 1
+          fi
+          if [ -n "$(tr -d '[:space:]' < "$f")" ]; then
+            echo "FAIL: expected empty output"
             exit 1
           fi
           echo "PASS"
