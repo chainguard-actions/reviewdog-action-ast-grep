@@ -1,0 +1,31 @@
+name: Test custom sg_config path, explicit sg_version and sg_flags
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          workdir: tests/fixtures/sg-basic
+          sg_config: custom-sgconfig.yml
+          sg_version: 0.51.1
+          sg_flags: src
+          reporter: local
+          filter_mode: nofilter
+          output_dir: /tmp/rd-config
+      - name: Assert finding reported using custom config
+        run: |
+          F=/tmp/rd-config/reviewdog-ast-grep
+          if [ ! -f "$F" ]; then
+            echo "FAIL: output file $F not found"
+            exit 1
+          fi
+          cat "$F"
+          if ! grep -q "Avoid console.log in sample code" "$F"; then
+            echo "FAIL: expected finding in output"
+            exit 1
+          fi
+          echo "PASS"

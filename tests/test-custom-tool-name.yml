@@ -1,0 +1,35 @@
+name: Test custom tool_name controls output file name
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          workdir: tests/fixtures/sg-basic
+          tool_name: my-sg
+          level: warning
+          reporter: local
+          filter_mode: nofilter
+          output_dir: /tmp/rd-toolname
+      - name: Assert output file uses custom tool name
+        run: |
+          ls -la /tmp/rd-toolname || true
+          F=/tmp/rd-toolname/reviewdog-my-sg
+          if [ ! -f "$F" ]; then
+            echo "FAIL: expected $F"
+            exit 1
+          fi
+          if [ -f /tmp/rd-toolname/reviewdog-ast-grep ]; then
+            echo "FAIL: default-named output file should not exist"
+            exit 1
+          fi
+          cat "$F"
+          if ! grep -q "Avoid console.log in sample code" "$F"; then
+            echo "FAIL: expected finding in output"
+            exit 1
+          fi
+          echo "PASS"
