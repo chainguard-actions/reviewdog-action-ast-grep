@@ -1,0 +1,36 @@
+name: Test custom tool name and explicit sg version
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          workdir: tests/fixtures/sg
+          reporter: local
+          filter_mode: nofilter
+          level: warning
+          tool_name: my-sg-lint
+          sg_version: 0.51.2
+          output_dir: /tmp/rd-out-custom
+      - name: Assert output file uses custom tool name
+        run: |
+          F=/tmp/rd-out-custom/reviewdog-my-sg-lint
+          ls -la /tmp/rd-out-custom || true
+          if [ ! -f "$F" ]; then
+            echo "FAIL: expected output file $F"
+            exit 1
+          fi
+          if [ -f /tmp/rd-out-custom/reviewdog-ast-grep ]; then
+            echo "FAIL: default-named output file should not exist"
+            exit 1
+          fi
+          cat "$F"
+          if ! grep -q "Avoid console.log" "$F"; then
+            echo "FAIL: expected rule message in output"
+            exit 1
+          fi
+          echo "PASS"

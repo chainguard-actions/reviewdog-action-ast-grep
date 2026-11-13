@@ -1,0 +1,35 @@
+name: Test local reporter finds issue
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          workdir: tests/fixtures/sg
+          reporter: local
+          filter_mode: nofilter
+          output_dir: /tmp/rd-out-basic
+      - name: Assert output file contains the finding
+        run: |
+          F=/tmp/rd-out-basic/reviewdog-ast-grep
+          if [ ! -f "$F" ]; then
+            echo "FAIL: output file $F not found"
+            ls -la /tmp/rd-out-basic || true
+            exit 1
+          fi
+          echo "--- output ---"
+          cat "$F"
+          echo "--------------"
+          if ! grep -q "app.js" "$F"; then
+            echo "FAIL: expected finding in app.js"
+            exit 1
+          fi
+          if ! grep -q "Avoid console.log" "$F"; then
+            echo "FAIL: expected rule message in output"
+            exit 1
+          fi
+          echo "PASS"
