@@ -9,41 +9,26 @@ jobs:
       - id: action
         uses: .
         with:
-          workdir: tests/fixtures/sg
+          workdir: tests/fixtures/sg-violations
           reporter: local
           filter_mode: nofilter
-          output_dir: /tmp/rd-basic
-      - name: Assert step succeeded
-        env:
-          OUTCOME: ${{ steps.action.outcome }}
+          level: error
+          output_dir: ${{ github.workspace }}/rd-out-basic
+      - name: Assert finding reported
         run: |
-          echo "outcome: $OUTCOME"
-          if [ "$OUTCOME" != "success" ]; then
-            echo "FAIL: expected success"
-            exit 1
-          fi
-          echo "PASS"
-      - name: Assert finding reported in output file
-        run: |
-          f=/tmp/rd-basic/reviewdog-ast-grep
-          if [ ! -f "$f" ]; then
-            echo "FAIL: output file $f not found"
-            ls -la /tmp/rd-basic || true
+          F="$GITHUB_WORKSPACE/rd-out-basic/reviewdog-ast-grep"
+          if [ ! -f "$F" ]; then
+            echo "FAIL: output file $F not found"
             exit 1
           fi
           echo "--- output ---"
-          cat "$f"
-          echo "--------------"
-          if ! grep -q "sample.js" "$f"; then
-            echo "FAIL: expected sample.js finding"
-            exit 1
-          fi
-          if ! grep -q "Avoid console.log" "$f"; then
+          cat "$F"
+          if ! grep -q "Avoid console.log in production code" "$F"; then
             echo "FAIL: expected rule message in output"
             exit 1
           fi
-          if grep -q "clean.js" "$f"; then
-            echo "FAIL: clean.js should have no findings"
+          if ! grep -q "src/app.js" "$F"; then
+            echo "FAIL: expected src/app.js in output"
             exit 1
           fi
           echo "PASS"

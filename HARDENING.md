@@ -14,22 +14,23 @@ Action **reviewdog--action-ast-grep/v1** was hardened automatically. 1 finding(s
 
 ## Findings Fixed
 
-### unpinned-uses (severity: high)
+### script-injection (severity: high)
 
-The composite action steps in action.yml pin actions to version tags instead of full 40-character commit SHAs: 'uses: reviewdog/action-setup@v1.5.0' and 'uses: github/codeql-action/upload-sarif@v4.39.1'.
+Rule (b): script.sh is run by the composite step in action.yml ('run: $GITHUB_ACTION_PATH/script.sh'). It expands two workflow-controlled env vars unquoted, straight into command arguments: '${INPUT_SG_FLAGS} |' (from inputs.sg_flags) in the ast-grep scan command, and '${INPUT_REVIEWDOG_FLAGS} |' (from inputs.reviewdog_flags) in the reviewdog command. The '# shellcheck disable=SC2086' comment sits on a command, not on a NAME=($VAR) array assignment, so the array-list exception does not apply. Fix: split each value into an array first with the hardened form, e.g. '# shellcheck disable=SC2206' then 'SG_FLAGS=(${INPUT_SG_FLAGS})', and pass the array as "${SG_FLAGS[@]}". Do the same for REVIEWDOG_FLAGS.
 
 Locations:
 
-- `action.yml:67`
-- `action.yml:91`
+- `script.sh:58`
+- `script.sh:66`
+- `action.yml:69`
 
 ## Iteration Notes
 
 ### Iteration 1
 
-**Fixes applied:** unpinned-uses
+**Fixes applied:** script-injection
 
 **Notes:**
 
-Pinned reviewdog/action-setup to d8a7baabd7f3e8544ee4dbde3ee41d0011c3a93f (v1.5.0) and github/codeql-action/upload-sarif to 9b3254085494b55a0f7c4c2b3d2d52cc712ce370 (v4.39.1) in action.yml. No other changes.
+script.sh: INPUT_SG_FLAGS and INPUT_REVIEWDOG_FLAGS are now split into arrays with SG_FLAGS=(${INPUT_SG_FLAGS}) and REVIEWDOG_FLAGS=(${INPUT_REVIEWDOG_FLAGS}), each with a '# shellcheck disable=SC2206' comment. The commands now take "${SG_FLAGS[@]}" and "${REVIEWDOG_FLAGS[@]}". This splits on whitespace and expands globs the same way upstream's unquoted variables did, and an empty input still adds no argument. reviewdog still reads its data on stdin from the pipe. action.yml: the composite step now runs the script with the path in double quotes ("$GITHUB_ACTION_PATH/script.sh"). That step uses shell: bash, so the quoting is valid. Nothing was run or tested.
 

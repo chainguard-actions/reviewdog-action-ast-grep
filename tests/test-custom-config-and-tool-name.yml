@@ -1,0 +1,32 @@
+name: Test custom sg_config and tool_name
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          workdir: tests/fixtures/sg-violations
+          sg_config: custom-sg.yml
+          sg_version: 0.51.2
+          tool_name: my-sg
+          reporter: local
+          filter_mode: nofilter
+          output_dir: ${{ github.workspace }}/rd-out-custom
+      - name: Assert output file named after tool_name
+        run: |
+          F="$GITHUB_WORKSPACE/rd-out-custom/reviewdog-my-sg"
+          ls -la "$GITHUB_WORKSPACE/rd-out-custom" || true
+          if [ ! -f "$F" ]; then
+            echo "FAIL: output file $F not found"
+            exit 1
+          fi
+          cat "$F"
+          if ! grep -q "Avoid console.log in production code" "$F"; then
+            echo "FAIL: expected rule message in output"
+            exit 1
+          fi
+          echo "PASS"

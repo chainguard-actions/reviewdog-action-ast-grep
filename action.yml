@@ -80,7 +80,7 @@ runs:
     - uses: chainguard-actions/reviewdog-action-setup@1ce633154760f8ceb9de1e4c17deb0188ef82866 # v1.5.0
       with:
         reviewdog_version: v0.21.3
-    - run: $GITHUB_ACTION_PATH/script.sh
+    - run: '"$GITHUB_ACTION_PATH/script.sh"'
       shell: bash
       env:
         # INPUT_<VARIABLE_NAME> is not available in Composite run steps
@@ -99,9 +99,9 @@ runs:
         INPUT_SG_CONFIG: ${{ inputs.sg_config }}
         INPUT_SG_FLAGS: ${{ inputs.sg_flags }}
         INPUT_CUSTOM_LANGUAGES: ${{ inputs.custom_languages }}
-        DEFAULT_SG_VERSION: 0.51.1
+        DEFAULT_SG_VERSION: 0.51.2
     - if: inputs.reporter == 'sarif'
-      uses: chainguard-actions/github-codeql-action/upload-sarif@fb4cd6516f031c131efd4b91cb7a4ab5975a11ae # v4.39.1
+      uses: chainguard-actions/github-codeql-action/upload-sarif@e4969b640f7a67163769dc6d910d19032366881b # v4.39.3
       with:
         sarif_file: ${{ inputs.output_dir }}
 
