@@ -16,13 +16,12 @@ Action **reviewdog--action-ast-grep/v1** was hardened automatically. 1 finding(s
 
 ### script-injection (severity: high)
 
-Rule (b): script.sh is run by the composite step in action.yml ('run: $GITHUB_ACTION_PATH/script.sh'). It expands two workflow-controlled env vars unquoted, straight into command arguments: '${INPUT_SG_FLAGS} |' (from inputs.sg_flags) in the ast-grep scan command, and '${INPUT_REVIEWDOG_FLAGS} |' (from inputs.reviewdog_flags) in the reviewdog command. The '# shellcheck disable=SC2086' comment sits on a command, not on a NAME=($VAR) array assignment, so the array-list exception does not apply. Fix: split each value into an array first with the hardened form, e.g. '# shellcheck disable=SC2206' then 'SG_FLAGS=(${INPUT_SG_FLAGS})', and pass the array as "${SG_FLAGS[@]}". Do the same for REVIEWDOG_FLAGS.
+Rule (b): script.sh is the supporting script run by the action's composite step. It expands two workflow-controlled env vars, both set from inputs.* in action.yml, without quotes and outside an array assignment: line 58 `${INPUT_SG_FLAGS} |` (inputs.sg_flags) and line 68 `${INPUT_REVIEWDOG_FLAGS} |` (inputs.reviewdog_flags). Both are passed directly as command arguments to ast-grep and reviewdog. Word-splitting does not run ';', '|' or $(...) from the value, but the caller can inject arbitrary extra flags and the values are glob-expanded. The fix that keeps the whitespace-separated list behaviour is to split each into an array first, e.g. `# shellcheck disable=SC2206` then `SG_FLAGS=(${INPUT_SG_FLAGS})`, and pass it as "${SG_FLAGS[@]}". Do the same for INPUT_REVIEWDOG_FLAGS.
 
 Locations:
 
 - `script.sh:58`
-- `script.sh:66`
-- `action.yml:69`
+- `script.sh:68`
 
 ## Iteration Notes
 
@@ -32,5 +31,5 @@ Locations:
 
 **Notes:**
 
-script.sh: INPUT_SG_FLAGS and INPUT_REVIEWDOG_FLAGS are now split into arrays with SG_FLAGS=(${INPUT_SG_FLAGS}) and REVIEWDOG_FLAGS=(${INPUT_REVIEWDOG_FLAGS}), each with a '# shellcheck disable=SC2206' comment. The commands now take "${SG_FLAGS[@]}" and "${REVIEWDOG_FLAGS[@]}". This splits on whitespace and expands globs the same way upstream's unquoted variables did, and an empty input still adds no argument. reviewdog still reads its data on stdin from the pipe. action.yml: the composite step now runs the script with the path in double quotes ("$GITHUB_ACTION_PATH/script.sh"). That step uses shell: bash, so the quoting is valid. Nothing was run or tested.
+I fixed the script-injection finding in script.sh. Both flag inputs are now split into arrays before they reach the commands: SG_FLAGS=(${INPUT_SG_FLAGS}) and REVIEWDOG_FLAGS=(${INPUT_REVIEWDOG_FLAGS}). The arrays are passed to ast-grep and reviewdog as ${ARR[@]+"${ARR[@]}"}. The split is unquoted on purpose, so it breaks on whitespace and expands globs exactly as upstream did, and an empty input adds no argument (the ${ARR[@]+...} guard also keeps it safe under `set -u` on bash 3.2). The commands' stdin still comes from the pipeline, and there is no xargs or quote-aware splitting. I did not run the script. action.yml did not need changes.
 
