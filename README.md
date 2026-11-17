@@ -52,6 +52,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | v1.68.2 | [`v1.68.2`](https://github.com/chainguard-actions/reviewdog-action-ast-grep/tree/v1.68.2) | [`7542e74`](https://github.com/reviewdog/action-ast-grep/commit/7542e74a2c440809ec997a1ef5e7b70d4000bac3) | [`HARDENING.md`](https://github.com/chainguard-actions/reviewdog-action-ast-grep/blob/v1.68.2/HARDENING.md) |
 | v1.68.3 | [`v1.68.3`](https://github.com/chainguard-actions/reviewdog-action-ast-grep/tree/v1.68.3) | [`7713313`](https://github.com/reviewdog/action-ast-grep/commit/77133138e1b8d02a5324cc717500e9063889db80) | [`HARDENING.md`](https://github.com/chainguard-actions/reviewdog-action-ast-grep/blob/v1.68.3/HARDENING.md) |
 | v1.69.0 | [`v1.69.0`](https://github.com/chainguard-actions/reviewdog-action-ast-grep/tree/v1.69.0) | [`644a0bf`](https://github.com/reviewdog/action-ast-grep/commit/644a0bf5abbfbac92be8a562f5300f8dc5288d51) | [`HARDENING.md`](https://github.com/chainguard-actions/reviewdog-action-ast-grep/blob/v1.69.0/HARDENING.md) |
+| v1.70.0 | [`v1.70.0`](https://github.com/chainguard-actions/reviewdog-action-ast-grep/tree/v1.70.0) | [`2dd9c58`](https://github.com/reviewdog/action-ast-grep/commit/2dd9c5833dcc11d89df3dc86519c59a53f67d81a) | [`HARDENING.md`](https://github.com/chainguard-actions/reviewdog-action-ast-grep/blob/v1.70.0/HARDENING.md) |
 
 ## Privacy
 
