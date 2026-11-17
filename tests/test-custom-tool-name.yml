@@ -1,0 +1,37 @@
+name: Test custom tool_name sets output file name
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Clean output dir
+        run: rm -rf "$GITHUB_WORKSPACE/tests/fixtures/sg-project/rd-out-tool"
+      - id: action
+        uses: .
+        with:
+          workdir: tests/fixtures/sg-project
+          tool_name: my-sg-linter
+          reporter: local
+          filter_mode: nofilter
+          output_dir: rd-out-tool
+      - name: Assert output file uses custom tool name
+        run: |
+          D="$GITHUB_WORKSPACE/tests/fixtures/sg-project/rd-out-tool"
+          ls -la "$D" || true
+          F="$D/reviewdog-my-sg-linter"
+          if [ ! -f "$F" ]; then
+            echo "FAIL: expected output file $F"
+            exit 1
+          fi
+          if [ -f "$D/reviewdog-ast-grep" ]; then
+            echo "FAIL: default-named output file should not exist"
+            exit 1
+          fi
+          cat "$F"
+          if ! grep -q "Avoid console.log" "$F"; then
+            echo "FAIL: expected console.log finding"
+            exit 1
+          fi
+          echo "PASS"
