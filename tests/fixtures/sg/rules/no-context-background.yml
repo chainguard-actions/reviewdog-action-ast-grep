@@ -1,6 +1,0 @@
-id: fixture-no-context-background
-message: Avoid context.Background in fixture code
-severity: error
-language: Go
-rule:
-  pattern: context.Background()

@@ -1,4 +1,4 @@
-name: Test custom tool_name changes output file name
+name: Test custom tool_name and explicit sg_version
 on:
   workflow_dispatch:
 jobs:
@@ -9,26 +9,28 @@ jobs:
       - id: action
         uses: .
         with:
+          workdir: tests/fixtures/sg-project
           reporter: local
           filter_mode: nofilter
-          tool_name: my-sg-linter
-          level: warning
-          output_dir: reviewdog-out-toolname
+          tool_name: my-sg
+          sg_version: 0.51.3
+          output_dir: out-custom
       - name: Assert output file named after tool_name
         run: |
-          D="$GITHUB_WORKSPACE/reviewdog-out-toolname"
-          ls -la "$D" || true
-          if [ ! -f "$D/reviewdog-my-sg-linter" ]; then
-            echo "FAIL: expected $D/reviewdog-my-sg-linter"
+          DIR="$GITHUB_WORKSPACE/tests/fixtures/sg-project/out-custom"
+          ls -la "$DIR" || true
+          OUT="$DIR/reviewdog-my-sg"
+          if [ ! -f "$OUT" ]; then
+            echo "FAIL: expected $OUT"
             exit 1
           fi
-          if [ -f "$D/reviewdog-ast-grep" ]; then
-            echo "FAIL: default-named file should not exist"
+          if [ -f "$DIR/reviewdog-ast-grep" ]; then
+            echo "FAIL: default-named output should not exist"
             exit 1
           fi
-          cat "$D/reviewdog-my-sg-linter"
-          if ! grep -q "testdata/main.go" "$D/reviewdog-my-sg-linter"; then
-            echo "FAIL: expected findings in testdata/main.go"
+          cat "$OUT"
+          if ! grep -q "app.js" "$OUT"; then
+            echo "FAIL: expected finding for app.js"
             exit 1
           fi
           echo "PASS"
