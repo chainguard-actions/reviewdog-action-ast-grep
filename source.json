@@ -2,11 +2,11 @@
   "owner": "reviewdog",
   "repo": "action-ast-grep",
   "version": "v1",
-  "commit_sha": "36e25e6a24813104073b57720e3cca2f58877e66",
+  "commit_sha": "8dad831bb760795df44474dfe624bd6584e2ab22",
   "url": "https://github.com/reviewdog/action-ast-grep",
   "policy_sha": "d636be7e43ef829af6e853da6b3c7566db9f72fe",
   "test_policy_sha": "843adf9e4b8f85d0c08b27b9d0b09dd094b54702",
   "test_agent_version": "2",
   "harden_agent_version": "2",
-  "dependency_fingerprint": "sha256:414269bef14b6a453e0787478f67a491350d3db4eede6a86d68d0fb698733d6a"
+  "dependency_fingerprint": "sha256:173e8f48fae45574742e4091ad0bfc6b83c84591a137f5ab43bcad1c71706f62"
 }

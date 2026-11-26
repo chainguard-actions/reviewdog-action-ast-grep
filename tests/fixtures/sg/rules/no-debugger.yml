@@ -1,0 +1,6 @@
+id: no-debugger
+language: JavaScript
+severity: error
+message: Remove debugger statement from fixture code
+rule:
+  kind: debugger_statement

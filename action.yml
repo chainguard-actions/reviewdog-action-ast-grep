@@ -101,7 +101,7 @@ runs:
         INPUT_CUSTOM_LANGUAGES: ${{ inputs.custom_languages }}
         DEFAULT_SG_VERSION: 0.51.3
     - if: inputs.reporter == 'sarif'
-      uses: chainguard-actions/github-codeql-action/upload-sarif@de687bc32c0035ee8e6ff99c5d6ede65b63d90e9 # v4.39.4
+      uses: chainguard-actions/github-codeql-action/upload-sarif@1ad12431ee96fa440cdd788386cb9ff49083a6f3 # v4.39.5
       with:
         sarif_file: ${{ inputs.output_dir }}
 
