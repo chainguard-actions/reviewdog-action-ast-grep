@@ -7,5 +7,6 @@
   "policy_sha": "d636be7e43ef829af6e853da6b3c7566db9f72fe",
   "test_policy_sha": "843adf9e4b8f85d0c08b27b9d0b09dd094b54702",
   "test_agent_version": "2",
-  "harden_agent_version": "2"
+  "harden_agent_version": "2",
+  "dependency_fingerprint": "sha256:173e8f48fae45574742e4091ad0bfc6b83c84591a137f5ab43bcad1c71706f62"
 }
