@@ -1,0 +1,35 @@
+name: Test custom tool_name names the output file
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          workdir: tests/fixtures/violation
+          tool_name: my-sg-linter
+          reporter: local
+          filter_mode: nofilter
+          level: warning
+          output_dir: /tmp/rd-custom
+      - name: Assert output file uses custom tool name
+        run: |
+          f=/tmp/rd-custom/reviewdog-my-sg-linter
+          ls -la /tmp/rd-custom || true
+          if [ ! -f "$f" ]; then
+            echo "FAIL: output file $f not found"
+            exit 1
+          fi
+          if [ -f /tmp/rd-custom/reviewdog-ast-grep ]; then
+            echo "FAIL: default-named output file should not exist"
+            exit 1
+          fi
+          echo "--- output ---"; cat "$f"; echo "--------------"
+          if ! grep -q "sample.js" "$f"; then
+            echo "FAIL: expected sample.js finding in output"
+            exit 1
+          fi
+          echo "PASS"

@@ -1,0 +1,30 @@
+name: Test explicit sg_version and sg_config path
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          workdir: tests/fixtures/violation
+          sg_version: 0.51.3
+          sg_config: ./sgconfig.yml
+          reporter: local
+          filter_mode: nofilter
+          output_dir: /tmp/rd-version
+      - name: Assert finding reported with pinned version
+        run: |
+          f=/tmp/rd-version/reviewdog-ast-grep
+          if [ ! -f "$f" ]; then
+            echo "FAIL: output file $f not found"
+            exit 1
+          fi
+          echo "--- output ---"; cat "$f"; echo "--------------"
+          if ! grep -q "Avoid console.log in production code" "$f"; then
+            echo "FAIL: expected rule message in output"
+            exit 1
+          fi
+          echo "PASS"
